@@ -1,5 +1,32 @@
 [
   {
+    "id": "22266fbf-7b71-4a56-b0ae-357e1e8a8da4",
+    "timestamp": "2026-01-11 20:10",
+    "model": "gemma3:27b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hey there"
+      },
+      {
+        "role": "assistant",
+        "content": "Hey to you too! \ud83d\udc4b \n\nHow can I help you today? Just let me know what you're thinking, or if you just wanted to say hi, that's great too! \ud83d\ude0a\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "how are u"
+      },
+      {
+        "role": "assistant",
+        "content": "As an AI, I don't *experience* feelings like humans do, but I'm functioning perfectly! \ud83d\ude04 I'm ready and eager to help with whatever you need. \n\nThanks for asking though - it's nice to be asked! How are *you* doing today?\n\n\n\n"
+      }
+    ]
+  },
+  {
     "id": "6fb6fbb4-226d-415e-904e-93c827609e6e",
     "timestamp": "2026-01-11 18:25",
     "model": "qwen3-coder:30b",

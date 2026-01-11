@@ -1,7 +1,7 @@
 {
   "deepseek-r1:32b": {
-    "description": "A powerful reasoning model distilled from DeepSeek-R1, optimized for complex logic and chain-of-thought tasks.",
-    "tags": ["Reasoning", "CoT", "reasoning"],
+    "description": "Distilled version of DeepSeek R1 for reasoning tasks.",
+    "tags": ["thinking", "complex reasoning"],
     "icon": "fa-brain",
     "color": "border-blue-400"
   },
@@ -13,51 +13,52 @@
     "speed": "10" 
   },
   "gpt-oss:latest": {
-    "description": "An open-source implementation aiming to replicate GPT-4 class performance.",
-    "tags": ["Open Source", "Chat"],
+    "description": "Close to GPT4 performance",
+    "tags": ["thinking", "Chat"],
     "icon": "fa-robot",
     "color": "border-blue-400"
   },
   "qwen3-coder:30b": {
-    "description": "State-of-the-art coding model by Alibaba Cloud, excelling in Python, C++, and Java generation.",
-    "tags": ["Code", "Programming", "Dev"],
+    "description": "State-of-the-art coding model for its size.",
+    "tags": ["coding"],
     "icon": "fa-code",
-    "color": "border-indigo-500"
+    "color": "border-blue-400"
   },
   "devstral-small-2:latest": {
     "description": "A highly efficient Mistral-based model fine-tuned for development workflows.",
-    "tags": ["Fast", "Mistral", "Dev"],
+    "tags": ["fast", "coding"],
     "icon": "fa-wind",
-    "color": "border-orange-400"
+    "color": "border-blue-400"
   },
   "gemma3:270m": {
-    "description": "Ultra-lightweight Gemma variant designed for mobile and edge devices.",
-    "tags": ["Mobile", "Edge", "Fast"],
+    "description": "Ultra-lightweight Gemma variant.",
+    "tags": ["fast"],
     "icon": "fa-mobile-screen",
-    "color": "border-teal-400"
+    "color": "border-blue-400"
   },
   "gemma3n:e4b": {
     "description": "Experimental edge-optimized version of the Gemma architecture.",
-    "tags": ["Experimental", "Edge"],
+    "tags": ["experimental", "fast"],
     "icon": "fa-flask",
-    "color": "border-pink-500"
+    "color": "border-blue-400"
   },
   "llama2-uncensored:7b": {
     "description": "Llama 2 7B with refusal mechanisms removed for unrestricted conversation.",
-    "tags": ["Uncensored", "Llama 2", "Chat"],
+    "tags": ["uncensored", "talks too little", "chat"],
     "icon": "fa-unlock",
-    "color": "border-red-500"
+    "color": "border-blue-400"
   },
   "llama3.2:3b": {
-    "description": "Meta's lightweight Llama 3.2, optimized for speed and low latency on consumer hardware.",
-    "tags": ["Meta", "Llama 3", "Fast"],
+    "description": "Meta's lightweight Llama 3.2, optimized for speed and low latency.  ",
+    "tags": [ "fast"],
     "icon": "fa-layer-group",
-    "color": "border-blue-600"
+    "color": "border-blue-400"
+    
   },
   "qwen3:0.6b": {
-    "description": "Nano-sized Qwen model. Extremely fast, suitable for simple classification or embedded tasks.",
-    "tags": ["Nano", "Qwen", "Speed"],
+    "description": "Nano-sized Qwen model. Extremely fast, suitable for simple tasks.",
+    "tags": ["light", "Speed"],
     "icon": "fa-feather",
-    "color": "border-gray-400"
+    "color": "border-blue-400"
   }
 }
