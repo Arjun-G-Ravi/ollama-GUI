@@ -34,6 +34,35 @@
         .model-card { transition: all 0.2s; }
         .model-card:hover { transform: translateY(-2px); border-color: #60a5fa; }
         .model-card.selected { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
+
+        /* Thinking Box Styles */
+        details.thinking-box {
+            background-color: #1f2937;
+            border-left: 3px solid #60a5fa;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        details.thinking-box summary {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            font-weight: bold;
+            text-transform: uppercase;
+            user-select: none;
+            transition: color 0.2s;
+            background: rgba(0,0,0,0.2);
+        }
+        details.thinking-box summary:hover { color: #e5e7eb; background: rgba(0,0,0,0.3); }
+        details.thinking-box .thinking-content {
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: #9ca3af;
+            border-top: 1px solid #374151;
+            max-height: 400px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
@@ -43,7 +72,6 @@
         <div class="flex items-center gap-6">
             <h1 class="text-xl font-bold text-blue-400 tracking-tight"><i class="fa-solid fa-layer-group mr-2"></i>Ollama Studio</h1>
             
-            <!-- Connection Status -->
             <div id="connectionStatus" class="flex items-center gap-2 text-xs font-mono bg-gray-900 px-3 py-1 rounded border border-gray-600">
                 <div class="w-2 h-2 rounded-full bg-red-500" id="statusDot"></div>
                 <span id="statusText" class="text-gray-400">Checking...</span>
@@ -51,17 +79,22 @@
 
             <!-- Hardware Stats -->
             <div class="flex gap-3">
-                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-28">
+                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-36">
                     <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>CPU</span> <span>RAM</span></div>
-                    <div class="flex justify-between text-xs font-mono text-green-400"><span id="stat-cpu">0%</span> <span id="stat-ram">0/0GB</span></div>
+                    <div class="flex justify-between items-center text-xs font-mono text-green-400 gap-2">
+                        <span id="stat-cpu">0%</span> 
+                        <span id="stat-ram">0 / 0 GB</span>
+                    </div>
                 </div>
-                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-28">
+                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-36">
                     <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>GPU</span> <span>VRAM</span></div>
-                    <div class="flex justify-between text-xs font-mono text-purple-400"><span id="stat-gpu">0%</span> <span id="stat-vram">0/0GB</span></div>
+                    <div class="flex justify-between items-center text-xs font-mono text-purple-400 gap-2">
+                        <span id="stat-gpu">0%</span> 
+                        <span id="stat-vram">0 / 0 GB</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Token Counter -->
             <div class="bg-gray-900 border border-gray-600 rounded px-3 py-2 flex items-center gap-2" title="Total Tokens Used">
                 <i class="fa-solid fa-coins text-yellow-500 text-xs"></i>
                 <span id="totalTokens" class="text-xs font-mono font-bold text-gray-200">0</span>
@@ -73,18 +106,16 @@
                 <span id="currentModelName">Select Model</span>
                 <i class="fa-solid fa-chevron-down text-xs"></i>
             </button>
-            
             <button onclick="resetConversation()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Clear Context">
                 <i class="fa-solid fa-eraser"></i>
             </button>
-
             <button onclick="restartServer()" class="bg-orange-900/40 hover:bg-orange-900/80 text-orange-300 px-3 py-1.5 rounded text-sm border border-orange-800 transition" title="Restart Ollama Server">
                 <i class="fa-solid fa-rotate-right"></i>
             </button>
         </div>
     </div>
 
-    <!-- Model Selection Modal -->
+    <!-- Model Modal -->
     <div id="modelModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-gray-800 border border-gray-700 rounded-xl w-3/4 max-w-5xl h-3/4 flex flex-col shadow-2xl">
             <div class="p-4 border-b border-gray-700 flex justify-between items-center">
@@ -94,12 +125,11 @@
                     <button onclick="closeModelModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
             </div>
-            <div id="modelGrid" class="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Cards injected here -->
-            </div>
+            <div id="modelGrid" class="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </div>
     </div>
 
+    <!-- Main Layout -->
     <div class="flex flex-1 overflow-hidden">
         <!-- Sidebar -->
         <div class="w-72 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0">
@@ -107,17 +137,14 @@
                 <button onclick="switchTab('prompts')" id="tab-prompts" class="flex-1 py-3 text-sm font-semibold bg-gray-700 text-blue-400 border-b-2 border-blue-400">Prompts</button>
                 <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent">History</button>
             </div>
-
             <div id="panel-prompts" class="flex-1 overflow-y-auto p-3 space-y-2">
                 <button onclick="createNewPrompt()" class="w-full border border-dashed border-gray-600 text-gray-400 p-2 rounded text-xs hover:border-blue-500 hover:text-blue-400 transition mb-2">+ New Prompt</button>
                 <div id="promptsList" class="space-y-2"></div>
             </div>
-
             <div id="panel-history" class="flex-1 overflow-y-auto p-3 space-y-2 hidden">
                 <button onclick="clearHistory()" class="text-xs text-red-400 hover:underline w-full text-right mb-2">Clear All</button>
                 <div id="historyList" class="space-y-2"></div>
             </div>
-
             <div class="p-3 border-t border-gray-700 bg-gray-900/30">
                 <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">System Prompt</label>
                 <div id="activeSystemPromptName" class="text-sm font-semibold text-blue-400 truncate">Default</div>
@@ -125,7 +152,7 @@
             </div>
         </div>
 
-        <!-- Main Chat -->
+        <!-- Chat Area -->
         <div class="flex-1 flex flex-col bg-gray-900 relative">
             <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth pb-32">
                 <div class="text-center text-gray-600 mt-24">
@@ -133,8 +160,6 @@
                     <p class="text-sm">Select a model to begin.</p>
                 </div>
             </div>
-
-            <!-- Input Area -->
             <div class="p-4 bg-gray-800 border-t border-gray-700 absolute bottom-0 w-full">
                 <div class="max-w-4xl mx-auto relative">
                     <div id="loadingIndicator" class="hidden absolute -top-8 left-0 text-xs text-blue-400 flex items-center gap-2">
@@ -152,7 +177,6 @@
     </div>
 
     <script>
-        // --- State ---
         let conversationHistory = [];
         let currentConversationId = null;
         let currentSystemPrompt = "You are a helpful assistant.";
@@ -160,72 +184,45 @@
         let isGenerating = false;
         let totalTokensUsed = 0;
         let isOllamaOnline = false;
+        let favoriteModels = [];
 
-        // --- Init ---
         document.addEventListener('DOMContentLoaded', () => {
             checkHealth();
             fetchPrompts();
             fetchHistory();
+            fetchFavorites();
             setInterval(updateStats, 500);
-            setInterval(checkHealth, 5000); // Check connection every 5s
+            setInterval(checkHealth, 5000);
             
             const tx = document.getElementById('userInput');
-            tx.addEventListener("input", function(){
-                this.style.height = "auto";
-                this.style.height = (this.scrollHeight) + "px";
-            });
-            tx.addEventListener("keydown", function(e){
-                if(e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
+            tx.addEventListener("input", function(){ this.style.height = "auto"; this.style.height = (this.scrollHeight) + "px"; });
+            tx.addEventListener("keydown", function(e){ if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
         });
 
-        // --- Health Check ---
         async function checkHealth() {
             try {
                 const res = await fetch('/api/health');
                 const data = await res.json();
                 const dot = document.getElementById('statusDot');
                 const text = document.getElementById('statusText');
-                
                 if(data.status === 'online') {
                     isOllamaOnline = true;
                     dot.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]";
-                    text.innerText = "Online";
-                    text.className = "text-green-400";
+                    text.innerText = "Online"; text.className = "text-green-400";
                 } else {
                     isOllamaOnline = false;
                     dot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]";
-                    text.innerText = "Offline";
-                    text.className = "text-red-400";
+                    text.innerText = "Offline"; text.className = "text-red-400";
                 }
-            } catch(e) {
-                isOllamaOnline = false;
-            }
+            } catch(e) { isOllamaOnline = false; }
         }
 
         async function restartServer() {
-            if(!confirm("Restart Ollama Server? This will kill the current process and start a new one.")) return;
-            
-            // Set UI to restarting state
-            const dot = document.getElementById('statusDot');
-            const text = document.getElementById('statusText');
-            dot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
-            text.innerText = "Restarting...";
-            text.className = "text-yellow-400";
-
-            try {
-                await fetch('/api/restart', {method: 'POST'});
-                // We don't wait for response because the server might die before responding fully
-                // The checkHealth interval will pick it up when it's back
-            } catch(e) {
-                console.log("Restart command sent");
-            }
+            if(!confirm("Restart Ollama Server?")) return;
+            document.getElementById('statusText').innerText = "Restarting...";
+            try { await fetch('/api/restart', {method: 'POST'}); } catch(e) {}
         }
 
-        // --- Stats ---
         async function updateStats() {
             try {
                 const res = await fetch('/api/stats');
@@ -238,98 +235,91 @@
             } catch(e) {}
         }
 
-        // --- Model Management ---
+        // --- Favorites ---
+        async function fetchFavorites() {
+            const res = await fetch('/api/favorites');
+            favoriteModels = await res.json();
+        }
+
+        async function toggleFavorite(e, name) {
+            e.stopPropagation();
+            await fetch('/api/favorites', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name})
+            });
+            await fetchFavorites();
+            fetchModels();
+        }
+
+        // --- Models ---
         function openModelModal() {
             document.getElementById('modelModal').classList.remove('hidden');
             fetchModels();
         }
-
-        function closeModelModal() {
-            document.getElementById('modelModal').classList.add('hidden');
-        }
+        function closeModelModal() { document.getElementById('modelModal').classList.add('hidden'); }
 
         async function fetchModels() {
             const grid = document.getElementById('modelGrid');
             grid.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>Fetching models...</p></div>`;
-            
             try {
                 const res = await fetch('/api/models');
                 const data = await res.json();
                 grid.innerHTML = '';
-
                 if(data.error) {
-                    grid.innerHTML = `
-                        <div class="col-span-full flex flex-col items-center justify-center text-center py-10 bg-red-900/20 rounded-lg border border-red-800">
-                            <i class="fa-solid fa-triangle-exclamation text-4xl text-red-500 mb-4"></i>
-                            <h3 class="text-xl font-bold text-red-400">Connection Failed</h3>
-                            <p class="text-gray-400 mt-2 mb-4">Ollama is offline.</p>
-                            <button onclick="restartServer()" class="bg-orange-700 hover:bg-orange-600 text-white px-4 py-2 rounded transition">Start Server</button>
-                        </div>
-                    `;
+                    grid.innerHTML = `<div class="col-span-full text-center text-red-500">Ollama is offline. <button onclick="restartServer()" class="underline">Restart Server</button></div>`;
                     return;
                 }
-
-                if(data.models.length === 0) {
-                    grid.innerHTML = `<div class="col-span-full text-center text-gray-500">No models found. Run 'ollama pull <model>' in terminal.</div>`;
-                    return;
-                }
+                
+                data.models.sort((a, b) => {
+                    const favA = favoriteModels.includes(a.name);
+                    const favB = favoriteModels.includes(b.name);
+                    if (favA && !favB) return -1;
+                    if (!favA && favB) return 1;
+                    return a.name.localeCompare(b.name);
+                });
 
                 for (const m of data.models) {
                     const sizeGB = (m.size / (1024*1024*1024)).toFixed(1);
                     const isSelected = selectedModel === m.name ? 'selected' : '';
+                    const isFav = favoriteModels.includes(m.name);
                     
                     const card = document.createElement('div');
                     card.className = `model-card bg-gray-700 border border-gray-600 rounded-lg p-4 cursor-pointer relative ${isSelected}`;
                     card.onclick = () => selectModel(m.name);
                     
                     card.innerHTML = `
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-bold text-white text-lg truncate w-3/4">${m.name}</h3>
-                            <span class="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">${sizeGB} GB</span>
+                        <div class="absolute top-2 right-2 z-10">
+                            <button onclick="toggleFavorite(event, '${m.name}')" class="text-lg hover:scale-110 transition ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}">
+                                <i class="fa-solid fa-star"></i>
+                            </button>
                         </div>
-                        <div class="text-xs text-gray-400 space-y-1" id="details-${m.name.replace(/[:.]/g, '')}">
+                        <div class="flex justify-between items-start mb-2 pr-6">
+                            <h3 class="font-bold text-white text-lg truncate w-full">${m.name}</h3>
+                        </div>
+                        <span class="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">${sizeGB} GB</span>
+                        <div class="text-xs text-gray-400 space-y-1 mt-2" id="details-${m.name.replace(/[:.]/g, '')}">
                             <div class="flex items-center gap-2"><i class="fa-solid fa-microchip"></i> <span>Loading details...</span></div>
                         </div>
                     `;
                     grid.appendChild(card);
                     fetchModelDetails(m.name);
                 }
-            } catch(e) {
-                grid.innerHTML = `<div class="col-span-full text-center text-red-500">Error connecting to backend.</div>`;
-            }
+            } catch(e) {}
         }
 
         async function fetchModelDetails(name) {
             try {
-                const res = await fetch('/api/model_details', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name})
-                });
+                const res = await fetch('/api/model_details', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name}) });
                 const data = await res.json();
                 const container = document.getElementById(`details-${name.replace(/[:.]/g, '')}`);
-                
                 if(data.details) {
                     container.innerHTML = `
                         <div class="grid grid-cols-2 gap-2 mt-3">
-                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
-                                <span class="block text-[10px] text-gray-500 uppercase">Family</span>
-                                <span class="text-blue-300 font-mono truncate">${data.details.family || 'N/A'}</span>
-                            </div>
-                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
-                                <span class="block text-[10px] text-gray-500 uppercase">Params</span>
-                                <span class="text-green-300 font-mono truncate">${data.details.parameter_size || 'N/A'}</span>
-                            </div>
-                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
-                                <span class="block text-[10px] text-gray-500 uppercase">Quant</span>
-                                <span class="text-purple-300 font-mono truncate">${data.details.quantization_level || 'N/A'}</span>
-                            </div>
-                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
-                                <span class="block text-[10px] text-gray-500 uppercase">Format</span>
-                                <span class="text-gray-300 font-mono truncate">${data.details.format || 'GGUF'}</span>
-                            </div>
-                        </div>
-                    `;
+                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600"><span class="block text-[10px] text-gray-500 uppercase">Family</span><span class="text-blue-300 font-mono truncate">${data.details.family || 'N/A'}</span></div>
+                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600"><span class="block text-[10px] text-gray-500 uppercase">Params</span><span class="text-green-300 font-mono truncate">${data.details.parameter_size || 'N/A'}</span></div>
+                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600"><span class="block text-[10px] text-gray-500 uppercase">Quant</span><span class="text-purple-300 font-mono truncate">${data.details.quantization_level || 'N/A'}</span></div>
+                        </div>`;
                 }
             } catch(e) {}
         }
@@ -341,35 +331,30 @@
             document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
         }
 
-        // --- Chat Logic ---
+        // --- Chat & Thinking Logic ---
         async function sendMessage() {
             if (isGenerating) return;
-            if (!selectedModel) { alert("Please select a model first!"); openModelModal(); return; }
-            if (!isOllamaOnline) { alert("Ollama is offline. Please restart the server."); return; }
+            if (!selectedModel) { alert("Select a model!"); openModelModal(); return; }
+            if (!isOllamaOnline) { alert("Ollama is offline."); return; }
             
             const input = document.getElementById('userInput');
             const text = input.value.trim();
-
             if (!text) return;
 
-            input.value = '';
-            input.style.height = 'auto';
+            input.value = ''; input.style.height = 'auto';
             isGenerating = true;
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
             document.getElementById('loadingIndicator').classList.remove('hidden');
-            document.getElementById('loadingText').innerText = "Loading model into VRAM...";
 
-            if (conversationHistory.length === 0) {
-                conversationHistory.push({ role: "system", content: currentSystemPrompt });
-                const chatWin = document.getElementById('chatWindow');
-                if(chatWin.querySelector('.text-center')) chatWin.innerHTML = '';
-            }
-
+            if (conversationHistory.length === 0) conversationHistory.push({ role: "system", content: currentSystemPrompt });
             conversationHistory.push({ role: "user", content: text });
             appendMessage("user", text);
 
+            // Create AI Message Bubble with split containers
             const aiMsgDiv = appendMessage("assistant", ""); 
-            const contentDiv = aiMsgDiv.querySelector('.msg-content');
+            const thoughtContainer = aiMsgDiv.querySelector('.thought-container');
+            const thoughtContent = aiMsgDiv.querySelector('.thought-content');
+            const answerContent = aiMsgDiv.querySelector('.answer-content');
             const metaDiv = aiMsgDiv.querySelector('.msg-meta');
             
             let fullResponse = "";
@@ -387,7 +372,6 @@
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    
                     const chunk = decoder.decode(value, { stream: true });
                     const lines = chunk.split('\n');
                     
@@ -395,23 +379,32 @@
                         if (!line.trim()) continue;
                         try {
                             const json = JSON.parse(line);
-                            
-                            if(json.error) {
-                                throw new Error(json.error);
-                            }
+                            if(json.error) throw new Error(json.error);
 
                             if (json.message && json.message.content) {
-                                document.getElementById('loadingText').innerText = "Generating tokens...";
+                                document.getElementById('loadingText').innerText = "Generating...";
                                 fullResponse += json.message.content;
-                                contentDiv.innerHTML = marked.parse(fullResponse);
-                                highlightCode(contentDiv);
+                                
+                                // Split Thought vs Answer
+                                const parts = splitThoughtAndAnswer(fullResponse);
+                                
+                                // Update Thought Box
+                                if (parts.thought) {
+                                    thoughtContainer.classList.remove('hidden');
+                                    // Use marked on thought content to support code blocks inside thoughts
+                                    thoughtContent.innerHTML = marked.parse(parts.thought);
+                                    highlightCode(thoughtContent);
+                                }
+
+                                // Update Answer
+                                answerContent.innerHTML = marked.parse(parts.answer);
+                                highlightCode(answerContent);
                                 scrollToBottom();
                             }
                             
                             if (json.done) {
                                 conversationHistory.push({ role: "assistant", content: fullResponse });
                                 saveConversation(selectedModel);
-                                
                                 if(json.eval_count) {
                                     const tps = (json.eval_count / (json.eval_duration / 1e9)).toFixed(1);
                                     const tokens = (json.prompt_eval_count || 0) + json.eval_count;
@@ -419,35 +412,47 @@
                                     metaDiv.innerText = `${tokens} tokens | ${tps} T/s`;
                                 }
                             }
-                        } catch (e) { }
+                        } catch (e) {}
                     }
                 }
-            } catch (e) {
-                contentDiv.innerHTML += `<br><span class="text-red-400">Error: ${e.message}</span>`;
-            }
+            } catch (e) { answerContent.innerHTML += `<br><span class="text-red-400">Error: ${e.message}</span>`; }
 
             isGenerating = false;
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
             document.getElementById('loadingIndicator').classList.add('hidden');
         }
 
+        function splitThoughtAndAnswer(text) {
+            // Regex to capture content inside <think> tags
+            const thinkMatch = text.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
+            const thought = thinkMatch ? thinkMatch[1] : null;
+            // Remove the think block to get the answer
+            const answer = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/, '');
+            return { thought, answer };
+        }
+
         function appendMessage(role, text) {
             const div = document.createElement('div');
             const isUser = role === 'user';
             div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
-            
             const bubble = document.createElement('div');
             bubble.className = isUser 
                 ? "bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[85%] shadow-lg" 
                 : "bg-gray-800 border border-gray-700 text-gray-200 px-5 py-4 rounded-2xl rounded-tl-none max-w-[90%] shadow-lg min-w-[200px]";
             
-            bubble.innerHTML = `
-                <div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">
-                    ${isUser ? text : '<span class="animate-pulse">...</span>'}
-                </div>
-                ${!isUser ? '<div class="msg-meta text-[10px] text-gray-500 mt-2 text-right font-mono h-4"></div>' : ''}
-            `;
-
+            if (isUser) {
+                bubble.innerHTML = `<div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">${text}</div>`;
+            } else {
+                // Structure for AI: Thought Box (Hidden by default) + Answer Area
+                bubble.innerHTML = `
+                    <details class="thought-container thinking-box hidden">
+                        <summary>Thought Process</summary>
+                        <div class="thought-content prose prose-invert max-w-none text-xs"></div>
+                    </details>
+                    <div class="answer-content prose prose-invert max-w-none text-sm leading-relaxed"><span class="animate-pulse">...</span></div>
+                    <div class="msg-meta text-[10px] text-gray-500 mt-2 text-right font-mono h-4"></div>
+                `;
+            }
             div.appendChild(bubble);
             document.getElementById('chatWindow').appendChild(div);
             scrollToBottom();
@@ -455,133 +460,76 @@
         }
 
         function highlightCode(element) {
-            element.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
+            element.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
             element.querySelectorAll('pre').forEach(pre => {
                 if(pre.querySelector('.copy-btn')) return;
                 const btn = document.createElement('button');
                 btn.className = 'copy-btn';
                 btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
-                btn.onclick = () => {
-                    navigator.clipboard.writeText(pre.querySelector('code').innerText);
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
-                    setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 2000);
-                };
+                btn.onclick = () => { navigator.clipboard.writeText(pre.querySelector('code').innerText); btn.innerHTML = 'Copied'; setTimeout(() => btn.innerHTML = 'Copy', 2000); };
                 pre.appendChild(btn);
             });
         }
 
-        function scrollToBottom() {
-            const win = document.getElementById('chatWindow');
-            win.scrollTop = win.scrollHeight;
-        }
+        function scrollToBottom() { const win = document.getElementById('chatWindow'); win.scrollTop = win.scrollHeight; }
+        function resetConversation() { conversationHistory = []; currentConversationId = null; document.getElementById('chatWindow').innerHTML = `<div class="text-center text-gray-600 mt-24"><i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i><p class="text-sm">Context cleared.</p></div>`; }
 
-        function resetConversation() {
-            conversationHistory = [];
-            currentConversationId = null;
-            document.getElementById('chatWindow').innerHTML = `
-                <div class="text-center text-gray-600 mt-24">
-                    <i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i>
-                    <p class="text-sm">Context cleared.</p>
-                </div>`;
-        }
-
+        // --- History & Prompts ---
         async function saveConversation(model) {
             if(conversationHistory.length < 2) return;
-            const res = await fetch('/api/history', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: currentConversationId, model: model, messages: conversationHistory })
-            });
-            const data = await res.json();
-            currentConversationId = data.id;
-            fetchHistory();
+            const res = await fetch('/api/history', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: currentConversationId, model: model, messages: conversationHistory }) });
+            const data = await res.json(); currentConversationId = data.id; fetchHistory();
         }
-
         async function fetchHistory() {
-            const res = await fetch('/api/history');
-            const history = await res.json();
-            const list = document.getElementById('historyList');
-            list.innerHTML = '';
+            const res = await fetch('/api/history'); const history = await res.json();
+            const list = document.getElementById('historyList'); list.innerHTML = '';
             history.forEach(h => {
-                const div = document.createElement('div');
-                div.className = "bg-gray-700/30 p-2 rounded border border-gray-700 hover:bg-gray-700 cursor-pointer transition group";
-                const firstMsg = h.messages.find(m => m.role === 'user')?.content || "Empty";
-                div.innerHTML = `
-                    <div class="text-[10px] text-blue-400 mb-1 flex justify-between"><span>${h.model}</span><span class="text-gray-500">${h.timestamp.split(' ')[1]}</span></div>
-                    <div class="text-xs text-gray-300 truncate">${firstMsg}</div>
-                `;
-                div.onclick = () => loadHistory(h);
-                list.appendChild(div);
+                const div = document.createElement('div'); div.className = "bg-gray-700/30 p-2 rounded border border-gray-700 hover:bg-gray-700 cursor-pointer transition group";
+                div.innerHTML = `<div class="text-[10px] text-blue-400 mb-1 flex justify-between"><span>${h.model}</span><span class="text-gray-500">${h.timestamp.split(' ')[1]}</span></div><div class="text-xs text-gray-300 truncate">${h.messages.find(m => m.role === 'user')?.content || "Empty"}</div>`;
+                div.onclick = () => loadHistory(h); list.appendChild(div);
             });
         }
-
         function loadHistory(h) {
-            currentConversationId = h.id;
-            conversationHistory = h.messages;
-            selectedModel = h.model;
-            document.getElementById('currentModelName').innerText = h.model;
-            const chatWin = document.getElementById('chatWindow');
-            chatWin.innerHTML = '';
+            currentConversationId = h.id; conversationHistory = h.messages; selectedModel = h.model; document.getElementById('currentModelName').innerText = h.model;
+            const chatWin = document.getElementById('chatWindow'); chatWin.innerHTML = '';
             h.messages.forEach(msg => {
                 if(msg.role === 'system') return;
-                const bubble = appendMessage(msg.role, "");
-                const contentDiv = bubble.querySelector('.msg-content');
+                const bubble = appendMessage(msg.role, msg.content);
                 if(msg.role === 'assistant') {
-                    contentDiv.innerHTML = marked.parse(msg.content);
-                    highlightCode(contentDiv);
-                } else {
-                    contentDiv.innerText = msg.content;
+                    // Reconstruct split view for history
+                    const parts = splitThoughtAndAnswer(msg.content);
+                    const thoughtContainer = bubble.querySelector('.thought-container');
+                    const thoughtContent = bubble.querySelector('.thought-content');
+                    const answerContent = bubble.querySelector('.answer-content');
+                    
+                    if(parts.thought) {
+                        thoughtContainer.classList.remove('hidden');
+                        thoughtContent.innerHTML = marked.parse(parts.thought);
+                        highlightCode(thoughtContent);
+                    }
+                    answerContent.innerHTML = marked.parse(parts.answer);
+                    highlightCode(answerContent);
                 }
             });
         }
-
         async function fetchPrompts() {
-            const res = await fetch('/api/prompts');
-            const prompts = await res.json();
-            const list = document.getElementById('promptsList');
-            list.innerHTML = '';
+            const res = await fetch('/api/prompts'); const prompts = await res.json();
+            const list = document.getElementById('promptsList'); list.innerHTML = '';
             Object.keys(prompts).forEach(name => {
-                const div = document.createElement('div');
-                div.className = "group flex items-center justify-between bg-gray-700/50 p-2 rounded border border-transparent hover:border-gray-600 cursor-pointer";
-                div.innerHTML = `
-                    <div class="flex-1 truncate" onclick="setPrompt('${name}', '${prompts[name]}')"><div class="text-xs font-bold text-gray-300 group-hover:text-white">${name}</div></div>
-                    <button onclick="deletePrompt('${name}')" class="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
-                `;
+                const div = document.createElement('div'); div.className = "group flex items-center justify-between bg-gray-700/50 p-2 rounded border border-transparent hover:border-gray-600 cursor-pointer";
+                div.innerHTML = `<div class="flex-1 truncate" onclick="setPrompt('${name}', '${prompts[name]}')"><div class="text-xs font-bold text-gray-300 group-hover:text-white">${name}</div></div><button onclick="deletePrompt('${name}')" class="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>`;
                 list.appendChild(div);
             });
         }
-
-        async function createNewPrompt() {
-            const name = prompt("Name:"); if(!name) return;
-            const content = prompt("System Prompt:"); if(!content) return;
-            await fetch('/api/prompts', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, content}) });
-            fetchPrompts();
-        }
-
-        async function deletePrompt(name) {
-            if(confirm("Delete?")) { await fetch(`/api/prompts?name=${name}`, { method: 'DELETE' }); fetchPrompts(); }
-        }
-
-        function setPrompt(name, content) {
-            currentSystemPrompt = content;
-            document.getElementById('activeSystemPromptName').innerText = name;
-            document.getElementById('activeSystemPromptPreview').innerText = content;
-            resetConversation();
-        }
-
-        async function clearHistory() {
-            if(confirm("Clear all history?")) { await fetch('/api/history', { method: 'DELETE' }); fetchHistory(); }
-        }
-
+        async function createNewPrompt() { const name = prompt("Name:"); if(!name) return; const content = prompt("System Prompt:"); if(!content) return; await fetch('/api/prompts', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, content}) }); fetchPrompts(); }
+        async function deletePrompt(name) { if(confirm("Delete?")) { await fetch(`/api/prompts?name=${name}`, { method: 'DELETE' }); fetchPrompts(); } }
+        function setPrompt(name, content) { currentSystemPrompt = content; document.getElementById('activeSystemPromptName').innerText = name; document.getElementById('activeSystemPromptPreview').innerText = content; resetConversation(); }
+        async function clearHistory() { if(confirm("Clear all history?")) { await fetch('/api/history', { method: 'DELETE' }); fetchHistory(); } }
         function switchTab(tab) {
-            document.getElementById('panel-prompts').classList.add('hidden');
-            document.getElementById('panel-history').classList.add('hidden');
+            document.getElementById('panel-prompts').classList.add('hidden'); document.getElementById('panel-history').classList.add('hidden');
             document.getElementById('tab-prompts').className = "flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent";
             document.getElementById('tab-history').className = "flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent";
-            document.getElementById(`panel-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).className = "flex-1 py-3 text-sm font-semibold bg-gray-700 text-blue-400 border-b-2 border-blue-400";
+            document.getElementById(`panel-${tab}`).classList.remove('hidden'); document.getElementById(`tab-${tab}`).className = "flex-1 py-3 text-sm font-semibold bg-gray-700 text-blue-400 border-b-2 border-blue-400";
         }
     </script>
 </body>

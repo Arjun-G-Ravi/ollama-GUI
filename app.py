@@ -15,6 +15,7 @@ app = Flask(__name__)
 OLLAMA_API_BASE = "http://localhost:11434/api"
 PROMPTS_FILE = "prompts.json"
 HISTORY_FILE = "history.json"
+FAVORITES_FILE = "favorites.json"
 
 # --- Helpers ---
 def load_json(filename, default):
@@ -37,7 +38,6 @@ def index():
 
 @app.route('/api/health')
 def check_health():
-    """Checks if Ollama is reachable"""
     try:
         requests.get(f"{OLLAMA_API_BASE}/tags", timeout=0.5)
         return jsonify({"status": "online"})
@@ -46,67 +46,44 @@ def check_health():
 
 @app.route('/api/restart', methods=['POST'])
 def restart_server():
-    """Kills Ollama and starts it again"""
     try:
-        # 1. Kill existing process
-        if os.name == 'nt': # Windows
+        if os.name == 'nt':
             os.system("taskkill /F /IM ollama.exe")
-        else: # Linux/Mac
+        else:
             os.system("pkill ollama")
-        
-        # 2. Wait a moment for cleanup
         time.sleep(1)
-
-        # 3. Start new process (detached)
-        subprocess.Popen(
-            ["ollama", "serve"], 
-            stdout=subprocess.DEVNULL, 
-            stderr=subprocess.DEVNULL,
-            start_new_session=True
-        )
+        subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return jsonify({"status": "restarting"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/stats')
 def get_stats():
-    # CPU & RAM
     cpu_usage = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory()
-    ram_str = f"{round(ram.used / (1024**3), 1)}/{int(round(ram.total / (1024**3), 0))}GB"
-
-    # GPU (NVIDIA)
+    ram_str = f"{round(ram.used / (1024**3), 1)} / {int(round(ram.total / (1024**3), 0))} GB"
+    
     gpu_usage = 0
     vram_str = "N/A"
     
-    # Check for nvidia-smi
     if shutil.which('nvidia-smi'):
         try:
-            # Execute command to get specific CSV data: utilization.gpu, memory.used, memory.total
             result = subprocess.check_output(
                 ['nvidia-smi', '--query-gpu=utilization.gpu,memory.used,memory.total', '--format=csv,nounits,noheader'], 
                 encoding='utf-8'
             )
-            # Parse output (e.g., "45, 4096, 8192")
             lines = result.strip().split('\n')
             if lines:
                 data = lines[0].split(',')
                 gpu_usage = int(data[0].strip())
-                vram_used_mb = int(data[1].strip())
-                vram_total_mb = int(data[2].strip())
-                
-                # Convert to GB for display
-                vram_used_gb = round(vram_used_mb / 1024, 1)
-                vram_total_gb = int(round(vram_total_mb / 1024, 0))
-                vram_str = f"{vram_used_gb}/{vram_total_gb}GB"
-        except Exception as e:
-            print(f"GPU Stats Error: {e}") # Debugging print
+                vram_used_gb = round(int(data[1].strip()) / 1024, 1)
+                vram_total_gb = int(round(int(data[2].strip()) / 1024, 0))
+                vram_str = f"{vram_used_gb} / {vram_total_gb} GB"
+        except: pass
 
     return jsonify({
-        "cpu": cpu_usage,
-        "ram_text": ram_str,
-        "gpu": gpu_usage,
-        "vram_text": vram_str
+        "cpu": cpu_usage, "ram_text": ram_str,
+        "gpu": gpu_usage, "vram_text": vram_str
     })
 
 @app.route('/api/models')
@@ -119,80 +96,75 @@ def get_models():
 
 @app.route('/api/model_details', methods=['POST'])
 def get_model_details():
-    model_name = request.json.get('name')
     try:
-        resp = requests.post(f"{OLLAMA_API_BASE}/show", json={"name": model_name}, timeout=2)
+        resp = requests.post(f"{OLLAMA_API_BASE}/show", json={"name": request.json.get('name')}, timeout=2)
         return jsonify(resp.json())
     except:
         return jsonify({"details": {}})
+
+@app.route('/api/favorites', methods=['GET', 'POST'])
+def handle_favorites():
+    favorites = load_json(FAVORITES_FILE, [])
+    if request.method == 'POST':
+        name = request.json.get('name')
+        if name in favorites: favorites.remove(name)
+        else: favorites.append(name)
+        save_json(FAVORITES_FILE, favorites)
+    return jsonify(favorites)
 
 @app.route('/api/prompts', methods=['GET', 'POST', 'DELETE'])
 def handle_prompts():
     prompts = load_json(PROMPTS_FILE, {"Default": "You are a helpful assistant."})
     if request.method == 'POST':
-        data = request.json
-        prompts[data['name']] = data['content']
+        prompts[request.json['name']] = request.json['content']
         save_json(PROMPTS_FILE, prompts)
         return jsonify({"status": "saved"})
     if request.method == 'DELETE':
         name = request.args.get('name')
-        if name in prompts:
-            del prompts[name]
-            save_json(PROMPTS_FILE, prompts)
+        if name in prompts: del prompts[name]
+        save_json(PROMPTS_FILE, prompts)
         return jsonify({"status": "deleted"})
     return jsonify(prompts)
 
 @app.route('/api/history', methods=['GET', 'POST', 'DELETE'])
 def handle_history():
     history = load_json(HISTORY_FILE, [])
-    
     if request.method == 'POST':
         data = request.json
         chat_id = data.get('id')
-        
-        existing_index = next((index for (index, d) in enumerate(history) if d["id"] == chat_id), None)
-        
+        existing_index = next((i for (i, d) in enumerate(history) if d["id"] == chat_id), None)
         entry = {
             "id": chat_id if chat_id else str(uuid.uuid4()),
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "model": data.get("model"),
             "messages": data.get("messages")
         }
-
         if existing_index is not None:
             history[existing_index] = entry 
             history.insert(0, history.pop(existing_index))
         else:
             history.insert(0, entry)
-            
         save_json(HISTORY_FILE, history[:50])
         return jsonify({"status": "saved", "id": entry["id"]})
-
     if request.method == 'DELETE':
         save_json(HISTORY_FILE, [])
         return jsonify({"status": "cleared"})
-
     return jsonify(history)
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
     data = request.json
-    model = data.get('model')
-    messages = data.get('messages')
-
     def generate():
-        payload = { "model": model, "messages": messages, "stream": True }
         try:
-            with requests.post(f"{OLLAMA_API_BASE}/chat", json=payload, stream=True) as r:
+            with requests.post(f"{OLLAMA_API_BASE}/chat", json={**data, "stream": True}, stream=True) as r:
                 for line in r.iter_lines():
-                    if line:
-                        yield line + b'\n'
+                    if line: yield line + b'\n'
         except Exception as e:
-            yield json.dumps({"error": f"Connection Error: {str(e)}"}).encode() + b'\n'
-
+            yield json.dumps({"error": str(e)}).encode() + b'\n'
     return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
 if __name__ == '__main__':
     load_json(PROMPTS_FILE, {"Default": "You are a helpful assistant."})
     load_json(HISTORY_FILE, [])
+    load_json(FAVORITES_FILE, [])
     app.run(port=5000, debug=True)

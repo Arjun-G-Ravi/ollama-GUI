@@ -25,3 +25,11 @@ features needed
 
 - make sure the vram for gpu is working
 - add a restart server option, which pkills ollama and starts the server
+
+- add a little bit of spacebetween %usage and ram for both cpu and gpu - they are coinciding now
+- add a favourite option, which lets me favourite models - these models appear first in model selector
+- some models think. I want this thinking to appear in another box while thinking happens. This box is  always in condensed mode and will reveal only after the user pressing it
+
+- the stop generating button doesnt stop genereating instantly, pls fix
+- change clear context to new chat(it should also set teh token usage to 0)
+now give me whole code, dont miss out anyything
