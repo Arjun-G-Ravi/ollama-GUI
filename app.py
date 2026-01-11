@@ -7,7 +7,6 @@ import shutil
 import uuid
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from datetime import datetime
-import requests
 
 app = Flask(__name__)
 
@@ -37,12 +36,14 @@ def index():
 
 @app.route('/api/kill', methods=['POST'])
 def kill_ollama():
-    try:
-        # Works on Linux/Mac. For Windows use 'taskkill /F /IM ollama.exe'
-        os.system("pkill ollama") 
-        return jsonify({"status": "killed", "message": "Ollama process terminated."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    print('\ncow')
+    return jsonify({"status": "killed", "message": "Ollama process terminated."})
+    # try:
+    #     # Works on Linux/Mac. For Windows use 'taskkill /F /IM ollama.exe'
+    #     os.system("pkill ollama") 
+    #     return jsonify({"status": "killed", "message": "Ollama process terminated."})
+    # except Exception as e:
+    #     return jsonify({"error": str(e)}), 500
 
 @app.route('/api/stats')
 def get_stats():

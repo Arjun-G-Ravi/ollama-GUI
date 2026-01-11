@@ -16,7 +16,6 @@
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         
-        /* Markdown & Code Styles */
         .prose pre { background-color: #111827 !important; padding: 1rem; border-radius: 0.5rem; border: 1px solid #374151; position: relative; margin-top: 0.5rem; margin-bottom: 0.5rem; }
         .prose code { color: #e5e7eb; background-color: #374151; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; }
         .prose pre code { background-color: transparent; padding: 0; color: inherit; }
@@ -24,7 +23,6 @@
         .prose th, .prose td { border: 1px solid #4b5563; padding: 0.5rem; text-align: left; }
         .prose th { background-color: #374151; }
         
-        /* Copy Button */
         .copy-btn {
             position: absolute; top: 0.5rem; right: 0.5rem;
             background: #374151; color: #9ca3af;
@@ -32,6 +30,11 @@
             font-size: 0.75rem; cursor: pointer; border: 1px solid #4b5563;
         }
         .copy-btn:hover { background: #4b5563; color: white; }
+
+        /* Model Card Grid */
+        .model-card { transition: all 0.2s; }
+        .model-card:hover { transform: translateY(-2px); border-color: #60a5fa; }
+        .model-card.selected { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
@@ -41,33 +44,31 @@
         <div class="flex items-center gap-6">
             <h1 class="text-xl font-bold text-blue-400 tracking-tight"><i class="fa-solid fa-layer-group mr-2"></i>Ollama Studio</h1>
             
-            <!-- Hardware Stats Boxes -->
+            <!-- Hardware Stats -->
             <div class="flex gap-3">
-                <!-- CPU/RAM Box -->
-                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-32">
-                    <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold">
-                        <span>CPU</span> <span>RAM</span>
-                    </div>
-                    <div class="flex justify-between text-xs font-mono text-green-400">
-                        <span id="stat-cpu">0%</span> <span id="stat-ram">0/0GB</span>
-                    </div>
+                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-28">
+                    <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>CPU</span> <span>RAM</span></div>
+                    <div class="flex justify-between text-xs font-mono text-green-400"><span id="stat-cpu">0%</span> <span id="stat-ram">0/0GB</span></div>
                 </div>
-                <!-- GPU/VRAM Box -->
-                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-32">
-                    <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold">
-                        <span>GPU</span> <span>VRAM</span>
-                    </div>
-                    <div class="flex justify-between text-xs font-mono text-purple-400">
-                        <span id="stat-gpu">0%</span> <span id="stat-vram">0/0GB</span>
-                    </div>
+                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-28">
+                    <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>GPU</span> <span>VRAM</span></div>
+                    <div class="flex justify-between text-xs font-mono text-purple-400"><span id="stat-gpu">0%</span> <span id="stat-vram">0/0GB</span></div>
                 </div>
+            </div>
+
+            <!-- Token Counter -->
+            <div class="bg-gray-900 border border-gray-600 rounded px-3 py-2 flex items-center gap-2" title="Total Tokens Used">
+                <i class="fa-solid fa-coins text-yellow-500 text-xs"></i>
+                <span id="totalTokens" class="text-xs font-mono font-bold text-gray-200">0</span>
             </div>
         </div>
 
         <div class="flex items-center gap-3">
-            <select id="modelSelect" class="bg-gray-700 border border-gray-600 text-sm rounded px-3 py-1.5 outline-none focus:border-blue-500 shadow-sm">
-                <option>Loading models...</option>
-            </select>
+            <!-- Model Selector Button -->
+            <button onclick="openModelModal()" id="modelBtn" class="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 px-4 py-1.5 rounded text-sm flex items-center gap-2 transition">
+                <span id="currentModelName">Select Model</span>
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+            </button>
             
             <button onclick="resetConversation()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Clear Context">
                 <i class="fa-solid fa-eraser"></i>
@@ -76,6 +77,23 @@
             <button onclick="killOllama()" class="bg-red-900/40 hover:bg-red-900/80 text-red-300 px-3 py-1.5 rounded text-sm border border-red-800 transition" title="Kill Ollama Process">
                 <i class="fa-solid fa-power-off"></i>
             </button>
+        </div>
+    </div>
+
+    <!-- Model Selection Modal -->
+    <div id="modelModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl w-3/4 max-w-5xl h-3/4 flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-box-open mr-2"></i>Available Models</h2>
+                <button onclick="closeModelModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="modelGrid" class="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Cards injected here -->
+                <div class="col-span-full text-center text-gray-500 py-10">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                    <p>Connecting to Ollama...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -109,7 +127,7 @@
             <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth pb-32">
                 <div class="text-center text-gray-600 mt-24">
                     <i class="fa-solid fa-microchip text-5xl mb-4 opacity-20"></i>
-                    <p class="text-sm">Ready to generate.</p>
+                    <p class="text-sm">Select a model to begin.</p>
                 </div>
             </div>
 
@@ -133,16 +151,18 @@
     <script>
         // --- State ---
         let conversationHistory = [];
-        let currentConversationId = null; // UUID for current chat session
+        let currentConversationId = null;
         let currentSystemPrompt = "You are a helpful assistant.";
+        let selectedModel = null;
         let isGenerating = false;
+        let totalTokensUsed = 0;
 
         // --- Init ---
         document.addEventListener('DOMContentLoaded', () => {
-            fetchModels();
+            fetchModels(); // This will trigger auto-start if needed
             fetchPrompts();
             fetchHistory();
-            setInterval(updateStats, 250); // 0.25s refresh
+            setInterval(updateStats, 500);
             
             const tx = document.getElementById('userInput');
             tx.addEventListener("input", function(){
@@ -157,7 +177,7 @@
             });
         });
 
-        // --- Stats ---
+        // --- Stats & Status ---
         async function updateStats() {
             try {
                 const res = await fetch('/api/stats');
@@ -166,34 +186,136 @@
                 document.getElementById('stat-ram').innerText = data.ram_text;
                 document.getElementById('stat-gpu').innerText = data.gpu + '%';
                 document.getElementById('stat-vram').innerText = data.vram_text;
+                
+                // Update Token Counter UI
+                document.getElementById('totalTokens').innerText = totalTokensUsed.toLocaleString();
             } catch(e) {}
         }
 
         async function killOllama() {
-            if(confirm("Are you sure you want to kill the Ollama process?")) {
+            if(confirm("Kill Ollama process? You will need to wait for it to restart next time.")) {
                 await fetch('/api/kill', {method: 'POST'});
-                alert("Kill command sent.");
+                alert("Process killed.");
             }
+        }
+
+        // --- Model Management ---
+        function openModelModal() {
+            document.getElementById('modelModal').classList.remove('hidden');
+            fetchModels(); // Refresh list
+        }
+
+        function closeModelModal() {
+            document.getElementById('modelModal').classList.add('hidden');
+        }
+
+        async function fetchModels() {
+            const grid = document.getElementById('modelGrid');
+            try {
+                const res = await fetch('/api/models');
+                if(res.status === 503) {
+                    grid.innerHTML = `<div class="col-span-full text-center text-yellow-500 py-10"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>Starting Ollama Service... Please wait.</p></div>`;
+                    setTimeout(fetchModels, 2000); // Retry
+                    return;
+                }
+                
+                const data = await res.json();
+                grid.innerHTML = '';
+
+                if(data.models.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center text-gray-500">No models found. Run 'ollama pull <model>' in terminal.</div>`;
+                    return;
+                }
+
+                // Render Cards
+                for (const m of data.models) {
+                    const sizeGB = (m.size / (1024*1024*1024)).toFixed(1);
+                    const isSelected = selectedModel === m.name ? 'selected' : '';
+                    
+                    const card = document.createElement('div');
+                    card.className = `model-card bg-gray-700 border border-gray-600 rounded-lg p-4 cursor-pointer relative ${isSelected}`;
+                    card.onclick = () => selectModel(m.name);
+                    
+                    // Basic Info
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-white text-lg truncate w-3/4">${m.name}</h3>
+                            <span class="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">${sizeGB} GB</span>
+                        </div>
+                        <div class="text-xs text-gray-400 space-y-1" id="details-${m.name.replace(/:/g, '')}">
+                            <div class="flex items-center gap-2"><i class="fa-solid fa-microchip"></i> <span>Loading details...</span></div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+
+                    // Lazy load details
+                    fetchModelDetails(m.name);
+                }
+            } catch(e) {
+                grid.innerHTML = `<div class="col-span-full text-center text-red-500">Error connecting to backend.</div>`;
+            }
+        }
+
+        async function fetchModelDetails(name) {
+            try {
+                const res = await fetch('/api/model_details', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name})
+                });
+                const data = await res.json();
+                const container = document.getElementById(`details-${name.replace(/:/g, '')}`);
+                
+                if(data.details) {
+                    container.innerHTML = `
+                        <div class="grid grid-cols-2 gap-2 mt-3">
+                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
+                                <span class="block text-[10px] text-gray-500 uppercase">Family</span>
+                                <span class="text-blue-300 font-mono">${data.details.family || 'N/A'}</span>
+                            </div>
+                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
+                                <span class="block text-[10px] text-gray-500 uppercase">Params</span>
+                                <span class="text-green-300 font-mono">${data.details.parameter_size || 'N/A'}</span>
+                            </div>
+                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
+                                <span class="block text-[10px] text-gray-500 uppercase">Quant</span>
+                                <span class="text-purple-300 font-mono">${data.details.quantization_level || 'N/A'}</span>
+                            </div>
+                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
+                                <span class="block text-[10px] text-gray-500 uppercase">Format</span>
+                                <span class="text-gray-300 font-mono">${data.details.format || 'GGUF'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch(e) {}
+        }
+
+        function selectModel(name) {
+            selectedModel = name;
+            document.getElementById('currentModelName').innerText = name;
+            closeModelModal();
+            // Visual update in modal
+            document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
         }
 
         // --- Chat Logic ---
         async function sendMessage() {
             if (isGenerating) return;
+            if (!selectedModel) { alert("Please select a model first!"); openModelModal(); return; }
+            
             const input = document.getElementById('userInput');
             const text = input.value.trim();
-            const model = document.getElementById('modelSelect').value;
 
             if (!text) return;
 
-            // UI Prep
             input.value = '';
             input.style.height = 'auto';
             isGenerating = true;
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
             document.getElementById('loadingIndicator').classList.remove('hidden');
-            document.getElementById('loadingText').innerText = "Loading model & generating...";
+            document.getElementById('loadingText').innerText = "Loading model into VRAM...";
 
-            // Init Context
             if (conversationHistory.length === 0) {
                 conversationHistory.push({ role: "system", content: currentSystemPrompt });
                 const chatWin = document.getElementById('chatWindow');
@@ -213,8 +335,12 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: model, messages: conversationHistory })
+                    body: JSON.stringify({ model: selectedModel, messages: conversationHistory })
                 });
+
+                if(response.status === 503) {
+                    throw new Error("Ollama is starting up... please try again in a few seconds.");
+                }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
@@ -231,27 +357,27 @@
                         try {
                             const json = JSON.parse(line);
                             
-                            // Handle Content
                             if (json.message && json.message.content) {
-                                document.getElementById('loadingText').innerText = "Generating...";
+                                document.getElementById('loadingText').innerText = "Generating tokens...";
                                 fullResponse += json.message.content;
                                 contentDiv.innerHTML = marked.parse(fullResponse);
                                 highlightCode(contentDiv);
                                 scrollToBottom();
                             }
                             
-                            // Handle Final Stats (Done)
                             if (json.done) {
                                 conversationHistory.push({ role: "assistant", content: fullResponse });
-                                saveConversation(model);
+                                saveConversation(selectedModel);
                                 
-                                // Calculate Tokens per Second
-                                if(json.eval_count && json.eval_duration) {
+                                // Update Token Stats
+                                if(json.eval_count) {
                                     const tps = (json.eval_count / (json.eval_duration / 1e9)).toFixed(1);
-                                    metaDiv.innerText = `${tps} T/s`;
+                                    const tokens = (json.prompt_eval_count || 0) + json.eval_count;
+                                    totalTokensUsed += tokens;
+                                    metaDiv.innerText = `${tokens} tokens | ${tps} T/s`;
                                 }
                             }
-                        } catch (e) { console.error(e); }
+                        } catch (e) { }
                     }
                 }
             } catch (e) {
@@ -273,7 +399,6 @@
                 ? "bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[85%] shadow-lg" 
                 : "bg-gray-800 border border-gray-700 text-gray-200 px-5 py-4 rounded-2xl rounded-tl-none max-w-[90%] shadow-lg min-w-[200px]";
             
-            // Structure: Content + Meta (for T/s)
             bubble.innerHTML = `
                 <div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">
                     ${isUser ? text : '<span class="animate-pulse">...</span>'}
@@ -291,16 +416,13 @@
             element.querySelectorAll('pre code').forEach((block) => {
                 hljs.highlightElement(block);
             });
-            // Add Copy Buttons
             element.querySelectorAll('pre').forEach(pre => {
                 if(pre.querySelector('.copy-btn')) return;
-                
                 const btn = document.createElement('button');
                 btn.className = 'copy-btn';
                 btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
                 btn.onclick = () => {
-                    const code = pre.querySelector('code').innerText;
-                    navigator.clipboard.writeText(code);
+                    navigator.clipboard.writeText(pre.querySelector('code').innerText);
                     btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
                     setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 2000);
                 };
@@ -315,7 +437,7 @@
 
         function resetConversation() {
             conversationHistory = [];
-            currentConversationId = null; // Reset ID to create new history block
+            currentConversationId = null;
             document.getElementById('chatWindow').innerHTML = `
                 <div class="text-center text-gray-600 mt-24">
                     <i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i>
@@ -323,21 +445,16 @@
                 </div>`;
         }
 
-        // --- History & Prompts ---
+        // --- History & Prompts (Same as before) ---
         async function saveConversation(model) {
             if(conversationHistory.length < 2) return;
-            
             const res = await fetch('/api/history', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    id: currentConversationId, // Send current ID (null if new)
-                    model: model,
-                    messages: conversationHistory
-                })
+                body: JSON.stringify({ id: currentConversationId, model: model, messages: conversationHistory })
             });
             const data = await res.json();
-            currentConversationId = data.id; // Update ID to keep saving to same block
+            currentConversationId = data.id;
             fetchHistory();
         }
 
@@ -351,10 +468,7 @@
                 div.className = "bg-gray-700/30 p-2 rounded border border-gray-700 hover:bg-gray-700 cursor-pointer transition group";
                 const firstMsg = h.messages.find(m => m.role === 'user')?.content || "Empty";
                 div.innerHTML = `
-                    <div class="text-[10px] text-blue-400 mb-1 flex justify-between">
-                        <span>${h.model}</span>
-                        <span class="text-gray-500">${h.timestamp.split(' ')[1]}</span>
-                    </div>
+                    <div class="text-[10px] text-blue-400 mb-1 flex justify-between"><span>${h.model}</span><span class="text-gray-500">${h.timestamp.split(' ')[1]}</span></div>
                     <div class="text-xs text-gray-300 truncate">${firstMsg}</div>
                 `;
                 div.onclick = () => loadHistory(h);
@@ -365,9 +479,10 @@
         function loadHistory(h) {
             currentConversationId = h.id;
             conversationHistory = h.messages;
+            selectedModel = h.model;
+            document.getElementById('currentModelName').innerText = h.model;
             const chatWin = document.getElementById('chatWindow');
             chatWin.innerHTML = '';
-            
             h.messages.forEach(msg => {
                 if(msg.role === 'system') return;
                 const bubble = appendMessage(msg.role, "");
@@ -390,9 +505,7 @@
                 const div = document.createElement('div');
                 div.className = "group flex items-center justify-between bg-gray-700/50 p-2 rounded border border-transparent hover:border-gray-600 cursor-pointer";
                 div.innerHTML = `
-                    <div class="flex-1 truncate" onclick="setPrompt('${name}', '${prompts[name]}')">
-                        <div class="text-xs font-bold text-gray-300 group-hover:text-white">${name}</div>
-                    </div>
+                    <div class="flex-1 truncate" onclick="setPrompt('${name}', '${prompts[name]}')"><div class="text-xs font-bold text-gray-300 group-hover:text-white">${name}</div></div>
                     <button onclick="deletePrompt('${name}')" class="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
                 `;
                 list.appendChild(div);
@@ -407,10 +520,7 @@
         }
 
         async function deletePrompt(name) {
-            if(confirm("Delete?")) {
-                await fetch(`/api/prompts?name=${name}`, { method: 'DELETE' });
-                fetchPrompts();
-            }
+            if(confirm("Delete?")) { await fetch(`/api/prompts?name=${name}`, { method: 'DELETE' }); fetchPrompts(); }
         }
 
         function setPrompt(name, content) {
@@ -421,23 +531,7 @@
         }
 
         async function clearHistory() {
-            if(confirm("Clear all history?")) {
-                await fetch('/api/history', { method: 'DELETE' });
-                fetchHistory();
-            }
-        }
-
-        async function fetchModels() {
-            const res = await fetch('/api/models');
-            const data = await res.json();
-            const select = document.getElementById('modelSelect');
-            select.innerHTML = '';
-            data.models.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.name;
-                opt.innerText = m.name;
-                select.appendChild(opt);
-            });
+            if(confirm("Clear all history?")) { await fetch('/api/history', { method: 'DELETE' }); fetchHistory(); }
         }
 
         function switchTab(tab) {
@@ -445,7 +539,6 @@
             document.getElementById('panel-history').classList.add('hidden');
             document.getElementById('tab-prompts').className = "flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent";
             document.getElementById('tab-history').className = "flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent";
-            
             document.getElementById(`panel-${tab}`).classList.remove('hidden');
             document.getElementById(`tab-${tab}`).className = "flex-1 py-3 text-sm font-semibold bg-gray-700 text-blue-400 border-b-2 border-blue-400";
         }

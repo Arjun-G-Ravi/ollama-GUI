@@ -18,7 +18,7 @@ features needed
     - this should update very fast (every 0.25 seconds)
 
 - the history is saving every talk and back in full conversation as separate history. one conversation needs to be in one history block only
-- one button next to clear context to pkill ollama
 - add copy button for codeblocks
-- When you are loading any model, say loaing model
-- tell the tokens per second for conversation as small text 
+- When you are loading any model, say loaing model. 
+- tell the tokens per second for conversation as small text and total token per conv
+- add model page which contains details for model such as model params, size, company, etc. Only fill up the known details and store them in a model.json file. the user can manually add details about models into it. Everytime the program starts, update this file with new models if available, dont over-write through the details added.
