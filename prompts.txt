@@ -1,0 +1,13 @@
+i want a localhost based app using flask, html, css for running llms locally which have to provide a ui over ollama. i run locally using ollama. this should properly see all the models that ive downloaded and show that in the UI. Also, i should be able to save multiple default prompts, which i should be able to reuse using a click. make teh UI look great
+
+
+features needed
+- show gpu, cpu usage
+- show ram, vram usage (it getting filled up as we load models)
+- stream the results
+- the UI should support codeblocks(with python color for LSP and all)
+- UI should support rendering tables
+- refresh talk and clear context button at top right
+- store conversation history
+- ability to edit/ delete saved prompts
+- 

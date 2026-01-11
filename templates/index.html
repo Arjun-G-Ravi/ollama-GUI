@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Local WebUI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chat-container { height: calc(100vh - 200px); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans">
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-800 p-4 flex flex-col border-r border-gray-700">
+            <h1 class="text-xl font-bold mb-6 text-blue-400">Ollama UI</h1>
+            
+            <label class="text-xs font-semibold uppercase text-gray-500 mb-2">Select Model</label>
+            <select id="modelSelect" class="bg-gray-700 border border-gray-600 rounded p-2 mb-6 outline-none focus:border-blue-500">
+                <option>Loading models...</option>
+            </select>
+
+            <label class="text-xs font-semibold uppercase text-gray-500 mb-2">Saved Prompts</label>
+            <div id="promptList" class="space-y-2 overflow-y-auto mb-4">
+                <!-- Prompts injected here -->
+            </div>
+            
+            <button onclick="addNewPrompt()" class="text-xs text-blue-400 hover:text-blue-300 transition">+ Add New Prompt</button>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <span id="currentModelLabel" class="text-sm font-mono text-gray-400">No model selected</span>
+                <textarea id="systemPromptDisplay" class="bg-transparent text-xs text-gray-400 w-1/2 text-right resize-none" readonly>System: Default</textarea>
+            </div>
+
+            <!-- Messages -->
+            <div id="chatWindow" class="chat-container overflow-y-auto p-6 space-y-4">
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 max-w-2xl">
+                    Hello! Select a model and start chatting.
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-6 border-t border-gray-700 bg-gray-800">
+                <div class="max-w-4xl mx-auto flex gap-4">
+                    <input type="text" id="userInput" placeholder="Type your message..." 
+                        class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500">
+                    <button onclick="sendMessage()" id="sendBtn" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg font-semibold transition">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSystemPrompt = "You are a helpful AI assistant.";
+
+        async function fetchModels() {
+            const res = await fetch('/api/models');
+            const data = await res.json();
+            const select = document.getElementById('modelSelect');
+            select.innerHTML = '';
+            data.models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.name;
+                opt.innerText = m.name;
+                select.appendChild(opt);
+            });
+            updateModelLabel();
+        }
+
+        async function fetchPrompts() {
+            const res = await fetch('/api/prompts');
+            const prompts = await res.json();
+            const list = document.getElementById('promptList');
+            list.innerHTML = '';
+            
+            Object.keys(prompts).forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-2 rounded text-sm bg-gray-700 hover:bg-gray-600 truncate transition";
+                btn.innerText = key;
+                btn.onclick = () => {
+                    currentSystemPrompt = prompts[key];
+                    document.getElementById('systemPromptDisplay').value = `System: ${key}\n"${prompts[key]}"`;
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        async function addNewPrompt() {
+            const name = prompt("Enter prompt name (e.g., Python Expert):");
+            const content = prompt("Enter the system instructions:");
+            if (name && content) {
+                await fetch('/api/prompts', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, content})
+                });
+                fetchPrompts();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const chatWindow = document.getElementById('chatWindow');
+            const model = document.getElementById('modelSelect').value;
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            // Append User Message
+            appendMessage('User', text, 'bg-blue-900/30 border-blue-800');
+            input.value = '';
+
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerText = "...";
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        model: model,
+                        prompt: text,
+                        system_prompt: currentSystemPrompt
+                    })
+                });
+                const data = await res.json();
+                appendMessage('AI', data.response, 'bg-gray-800 border-gray-700');
+            } catch (e) {
+                appendMessage('Error', 'Could not reach Ollama. Is it running?', 'bg-red-900/30 border-red-800');
+            }
+
+            sendBtn.disabled = false;
+            sendBtn.innerText = "Send";
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function appendMessage(sender, text, classes) {
+            const div = document.createElement('div');
+            div.className = `p-4 rounded-lg border ${classes} max-w-3xl whitespace-pre-wrap mb-4`;
+            div.innerHTML = `<strong class="block text-xs uppercase mb-1 opacity-50">${sender}</strong>${text}`;
+            document.getElementById('chatWindow').appendChild(div);
+            document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
+        }
+
+        function updateModelLabel() {
+            document.getElementById('currentModelLabel').innerText = "Model: " + document.getElementById('modelSelect').value;
+        }
+
+        document.getElementById('modelSelect').onchange = updateModelLabel;
+        document.getElementById('userInput').onkeypress = (e) => { if(e.key === 'Enter') sendMessage() };
+
+        // Init
+        fetchModels();
+        fetchPrompts();
+    </script>
+</body>
+</html>
