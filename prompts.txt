@@ -10,4 +10,15 @@ features needed
 - refresh talk and clear context button at top right
 - store conversation history
 - ability to edit/ delete saved prompts
-- 
+
+
+- i want the gpucpu info in 2 boxes. 
+    - first shows cpu % and RAM in numbers(7.6/16GB)
+    - second shows gpu% and VRAM in numbers(1.2/4GB)
+    - this should update very fast (every 0.25 seconds)
+
+- the history is saving every talk and back in full conversation as separate history. one conversation needs to be in one history block only
+- one button next to clear context to pkill ollama
+- add copy button for codeblocks
+- When you are loading any model, say loaing model
+- tell the tokens per second for conversation as small text 
