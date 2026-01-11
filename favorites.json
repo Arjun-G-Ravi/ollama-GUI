@@ -1,3 +1,6 @@
 [
-  "gpt-oss:latest"
+  "gpt-oss:latest",
+  "deepseek-r1:32b",
+  "gemma3:27b",
+  "qwen3-coder:30b"
 ]

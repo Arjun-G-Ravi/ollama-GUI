@@ -106,9 +106,12 @@
                 <span id="currentModelName">Select Model</span>
                 <i class="fa-solid fa-chevron-down text-xs"></i>
             </button>
-            <button onclick="resetConversation()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Clear Context">
-                <i class="fa-solid fa-eraser"></i>
+            
+            <!-- New Chat Button -->
+            <button onclick="newChat()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Start New Chat">
+                <i class="fa-solid fa-plus mr-1"></i> New Chat
             </button>
+            
             <button onclick="restartServer()" class="bg-orange-900/40 hover:bg-orange-900/80 text-orange-300 px-3 py-1.5 rounded text-sm border border-orange-800 transition" title="Restart Ollama Server">
                 <i class="fa-solid fa-rotate-right"></i>
             </button>
@@ -168,7 +171,7 @@
                     <textarea id="userInput" rows="1" placeholder="Type a message..." 
                         class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:border-blue-500 resize-none overflow-hidden shadow-inner text-sm"
                         style="min-height: 50px; max-height: 200px;"></textarea>
-                    <button onclick="sendMessage()" id="sendBtn" class="absolute right-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition shadow-lg">
+                    <button onclick="handleMainButton()" id="sendBtn" class="absolute right-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition shadow-lg">
                         <i class="fa-solid fa-paper-plane"></i>
                     </button>
                 </div>
@@ -185,6 +188,7 @@
         let totalTokensUsed = 0;
         let isOllamaOnline = false;
         let favoriteModels = [];
+        let abortController = null; // For stopping generation
 
         document.addEventListener('DOMContentLoaded', () => {
             checkHealth();
@@ -196,7 +200,7 @@
             
             const tx = document.getElementById('userInput');
             tx.addEventListener("input", function(){ this.style.height = "auto"; this.style.height = (this.scrollHeight) + "px"; });
-            tx.addEventListener("keydown", function(e){ if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+            tx.addEventListener("keydown", function(e){ if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleMainButton(); } });
         });
 
         async function checkHealth() {
@@ -332,6 +336,24 @@
         }
 
         // --- Chat & Thinking Logic ---
+        function handleMainButton() {
+            if (isGenerating) {
+                stopGeneration();
+            } else {
+                sendMessage();
+            }
+        }
+
+        function stopGeneration() {
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+            }
+            isGenerating = false;
+            document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+            document.getElementById('loadingIndicator').classList.add('hidden');
+        }
+
         async function sendMessage() {
             if (isGenerating) return;
             if (!selectedModel) { alert("Select a model!"); openModelModal(); return; }
@@ -343,6 +365,10 @@
 
             input.value = ''; input.style.height = 'auto';
             isGenerating = true;
+            
+            // Init AbortController
+            abortController = new AbortController();
+
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
             document.getElementById('loadingIndicator').classList.remove('hidden');
 
@@ -350,7 +376,6 @@
             conversationHistory.push({ role: "user", content: text });
             appendMessage("user", text);
 
-            // Create AI Message Bubble with split containers
             const aiMsgDiv = appendMessage("assistant", ""); 
             const thoughtContainer = aiMsgDiv.querySelector('.thought-container');
             const thoughtContent = aiMsgDiv.querySelector('.thought-content');
@@ -363,7 +388,8 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: selectedModel, messages: conversationHistory })
+                    body: JSON.stringify({ model: selectedModel, messages: conversationHistory }),
+                    signal: abortController.signal // Pass signal for aborting
                 });
 
                 const reader = response.body.getReader();
@@ -385,18 +411,14 @@
                                 document.getElementById('loadingText').innerText = "Generating...";
                                 fullResponse += json.message.content;
                                 
-                                // Split Thought vs Answer
                                 const parts = splitThoughtAndAnswer(fullResponse);
                                 
-                                // Update Thought Box
                                 if (parts.thought) {
                                     thoughtContainer.classList.remove('hidden');
-                                    // Use marked on thought content to support code blocks inside thoughts
                                     thoughtContent.innerHTML = marked.parse(parts.thought);
                                     highlightCode(thoughtContent);
                                 }
 
-                                // Update Answer
                                 answerContent.innerHTML = marked.parse(parts.answer);
                                 highlightCode(answerContent);
                                 scrollToBottom();
@@ -415,18 +437,23 @@
                         } catch (e) {}
                     }
                 }
-            } catch (e) { answerContent.innerHTML += `<br><span class="text-red-400">Error: ${e.message}</span>`; }
+            } catch (e) { 
+                if (e.name === 'AbortError') {
+                    answerContent.innerHTML += `<br><span class="text-yellow-500 text-xs">[Stopped by user]</span>`;
+                } else {
+                    answerContent.innerHTML += `<br><span class="text-red-400">Error: ${e.message}</span>`; 
+                }
+            }
 
             isGenerating = false;
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
             document.getElementById('loadingIndicator').classList.add('hidden');
+            abortController = null;
         }
 
         function splitThoughtAndAnswer(text) {
-            // Regex to capture content inside <think> tags
             const thinkMatch = text.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
             const thought = thinkMatch ? thinkMatch[1] : null;
-            // Remove the think block to get the answer
             const answer = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/, '');
             return { thought, answer };
         }
@@ -443,7 +470,6 @@
             if (isUser) {
                 bubble.innerHTML = `<div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">${text}</div>`;
             } else {
-                // Structure for AI: Thought Box (Hidden by default) + Answer Area
                 bubble.innerHTML = `
                     <details class="thought-container thinking-box hidden">
                         <summary>Thought Process</summary>
@@ -472,7 +498,23 @@
         }
 
         function scrollToBottom() { const win = document.getElementById('chatWindow'); win.scrollTop = win.scrollHeight; }
-        function resetConversation() { conversationHistory = []; currentConversationId = null; document.getElementById('chatWindow').innerHTML = `<div class="text-center text-gray-600 mt-24"><i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i><p class="text-sm">Context cleared.</p></div>`; }
+        
+        // --- New Chat Logic ---
+        function newChat() {
+            if(isGenerating) stopGeneration();
+            conversationHistory = [];
+            currentConversationId = null;
+            totalTokensUsed = 0; // Reset tokens
+            document.getElementById('totalTokens').innerText = "0"; // Update UI
+            document.getElementById('chatWindow').innerHTML = `
+                <div class="text-center text-gray-600 mt-24">
+                    <i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i>
+                    <p class="text-sm">New chat started.</p>
+                </div>`;
+        }
+        
+        // Deprecated resetConversation in favor of newChat, but keeping for prompt switching
+        function resetConversation() { newChat(); }
 
         // --- History & Prompts ---
         async function saveConversation(model) {
@@ -496,12 +538,10 @@
                 if(msg.role === 'system') return;
                 const bubble = appendMessage(msg.role, msg.content);
                 if(msg.role === 'assistant') {
-                    // Reconstruct split view for history
                     const parts = splitThoughtAndAnswer(msg.content);
                     const thoughtContainer = bubble.querySelector('.thought-container');
                     const thoughtContent = bubble.querySelector('.thought-content');
                     const answerContent = bubble.querySelector('.answer-content');
-                    
                     if(parts.thought) {
                         thoughtContainer.classList.remove('hidden');
                         thoughtContent.innerHTML = marked.parse(parts.thought);
@@ -523,7 +563,7 @@
         }
         async function createNewPrompt() { const name = prompt("Name:"); if(!name) return; const content = prompt("System Prompt:"); if(!content) return; await fetch('/api/prompts', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, content}) }); fetchPrompts(); }
         async function deletePrompt(name) { if(confirm("Delete?")) { await fetch(`/api/prompts?name=${name}`, { method: 'DELETE' }); fetchPrompts(); } }
-        function setPrompt(name, content) { currentSystemPrompt = content; document.getElementById('activeSystemPromptName').innerText = name; document.getElementById('activeSystemPromptPreview').innerText = content; resetConversation(); }
+        function setPrompt(name, content) { currentSystemPrompt = content; document.getElementById('activeSystemPromptName').innerText = name; document.getElementById('activeSystemPromptPreview').innerText = content; newChat(); }
         async function clearHistory() { if(confirm("Clear all history?")) { await fetch('/api/history', { method: 'DELETE' }); fetchHistory(); } }
         function switchTab(tab) {
             document.getElementById('panel-prompts').classList.add('hidden'); document.getElementById('panel-history').classList.add('hidden');
