@@ -1,10 +1,11 @@
 import os
 import json
-import time
 import psutil
-import subprocess
 import shutil
 import uuid
+import requests
+import subprocess
+import time
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from datetime import datetime
 
@@ -34,50 +35,72 @@ def save_json(filename, data):
 def index():
     return render_template('index.html')
 
-@app.route('/api/kill', methods=['POST'])
-def kill_ollama():
-    print('\ncow')
-    return jsonify({"status": "killed", "message": "Ollama process terminated."})
-    # try:
-    #     # Works on Linux/Mac. For Windows use 'taskkill /F /IM ollama.exe'
-    #     os.system("pkill ollama") 
-    #     return jsonify({"status": "killed", "message": "Ollama process terminated."})
-    # except Exception as e:
-    #     return jsonify({"error": str(e)}), 500
+@app.route('/api/health')
+def check_health():
+    """Checks if Ollama is reachable"""
+    try:
+        requests.get(f"{OLLAMA_API_BASE}/tags", timeout=0.5)
+        return jsonify({"status": "online"})
+    except:
+        return jsonify({"status": "offline"})
+
+@app.route('/api/restart', methods=['POST'])
+def restart_server():
+    """Kills Ollama and starts it again"""
+    try:
+        # 1. Kill existing process
+        if os.name == 'nt': # Windows
+            os.system("taskkill /F /IM ollama.exe")
+        else: # Linux/Mac
+            os.system("pkill ollama")
+        
+        # 2. Wait a moment for cleanup
+        time.sleep(1)
+
+        # 3. Start new process (detached)
+        subprocess.Popen(
+            ["ollama", "serve"], 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        return jsonify({"status": "restarting"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/stats')
 def get_stats():
     # CPU & RAM
     cpu_usage = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory()
-    
-    # Format: 7.6/16GB
-    ram_used = round(ram.used / (1024**3), 1)
-    ram_total = round(ram.total / (1024**3), 0) # Integer for total usually looks cleaner
-    ram_str = f"{ram_used}/{int(ram_total)}GB"
+    ram_str = f"{round(ram.used / (1024**3), 1)}/{int(round(ram.total / (1024**3), 0))}GB"
 
     # GPU (NVIDIA)
     gpu_usage = 0
     vram_str = "N/A"
     
+    # Check for nvidia-smi
     if shutil.which('nvidia-smi'):
         try:
-            # Fast query
+            # Execute command to get specific CSV data: utilization.gpu, memory.used, memory.total
             result = subprocess.check_output(
                 ['nvidia-smi', '--query-gpu=utilization.gpu,memory.used,memory.total', '--format=csv,nounits,noheader'], 
                 encoding='utf-8'
             )
-            data = result.strip().split(',')
-            gpu_usage = int(data[0])
-            vram_used = int(data[1])
-            vram_total = int(data[2])
-            
-            # Convert MB to GB
-            vram_used_gb = round(vram_used / 1024, 1)
-            vram_total_gb = round(vram_total / 1024, 0)
-            vram_str = f"{vram_used_gb}/{int(vram_total_gb)}GB"
-        except:
-            pass
+            # Parse output (e.g., "45, 4096, 8192")
+            lines = result.strip().split('\n')
+            if lines:
+                data = lines[0].split(',')
+                gpu_usage = int(data[0].strip())
+                vram_used_mb = int(data[1].strip())
+                vram_total_mb = int(data[2].strip())
+                
+                # Convert to GB for display
+                vram_used_gb = round(vram_used_mb / 1024, 1)
+                vram_total_gb = int(round(vram_total_mb / 1024, 0))
+                vram_str = f"{vram_used_gb}/{vram_total_gb}GB"
+        except Exception as e:
+            print(f"GPU Stats Error: {e}") # Debugging print
 
     return jsonify({
         "cpu": cpu_usage,
@@ -89,10 +112,19 @@ def get_stats():
 @app.route('/api/models')
 def get_models():
     try:
-        resp = requests.get(f"{OLLAMA_API_BASE}/tags")
+        resp = requests.get(f"{OLLAMA_API_BASE}/tags", timeout=2)
         return jsonify(resp.json())
     except:
-        return jsonify({"models": []})
+        return jsonify({"models": [], "error": "Ollama is offline"})
+
+@app.route('/api/model_details', methods=['POST'])
+def get_model_details():
+    model_name = request.json.get('name')
+    try:
+        resp = requests.post(f"{OLLAMA_API_BASE}/show", json={"name": model_name}, timeout=2)
+        return jsonify(resp.json())
+    except:
+        return jsonify({"details": {}})
 
 @app.route('/api/prompts', methods=['GET', 'POST', 'DELETE'])
 def handle_prompts():
@@ -118,7 +150,6 @@ def handle_history():
         data = request.json
         chat_id = data.get('id')
         
-        # Check if updating existing conversation
         existing_index = next((index for (index, d) in enumerate(history) if d["id"] == chat_id), None)
         
         entry = {
@@ -129,13 +160,12 @@ def handle_history():
         }
 
         if existing_index is not None:
-            history[existing_index] = entry # Update
-            # Move to top
+            history[existing_index] = entry 
             history.insert(0, history.pop(existing_index))
         else:
-            history.insert(0, entry) # Create new at top
+            history.insert(0, entry)
             
-        save_json(HISTORY_FILE, history[:50]) # Limit to 50
+        save_json(HISTORY_FILE, history[:50])
         return jsonify({"status": "saved", "id": entry["id"]})
 
     if request.method == 'DELETE':
@@ -151,7 +181,6 @@ def chat():
     messages = data.get('messages')
 
     def generate():
-        import requests # Import here to avoid global scope issues in threads
         payload = { "model": model, "messages": messages, "stream": True }
         try:
             with requests.post(f"{OLLAMA_API_BASE}/chat", json=payload, stream=True) as r:
@@ -159,7 +188,7 @@ def chat():
                     if line:
                         yield line + b'\n'
         except Exception as e:
-            yield json.dumps({"error": str(e)}).encode() + b'\n'
+            yield json.dumps({"error": f"Connection Error: {str(e)}"}).encode() + b'\n'
 
     return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 

@@ -31,7 +31,6 @@
         }
         .copy-btn:hover { background: #4b5563; color: white; }
 
-        /* Model Card Grid */
         .model-card { transition: all 0.2s; }
         .model-card:hover { transform: translateY(-2px); border-color: #60a5fa; }
         .model-card.selected { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
@@ -44,6 +43,12 @@
         <div class="flex items-center gap-6">
             <h1 class="text-xl font-bold text-blue-400 tracking-tight"><i class="fa-solid fa-layer-group mr-2"></i>Ollama Studio</h1>
             
+            <!-- Connection Status -->
+            <div id="connectionStatus" class="flex items-center gap-2 text-xs font-mono bg-gray-900 px-3 py-1 rounded border border-gray-600">
+                <div class="w-2 h-2 rounded-full bg-red-500" id="statusDot"></div>
+                <span id="statusText" class="text-gray-400">Checking...</span>
+            </div>
+
             <!-- Hardware Stats -->
             <div class="flex gap-3">
                 <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-28">
@@ -64,7 +69,6 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <!-- Model Selector Button -->
             <button onclick="openModelModal()" id="modelBtn" class="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 px-4 py-1.5 rounded text-sm flex items-center gap-2 transition">
                 <span id="currentModelName">Select Model</span>
                 <i class="fa-solid fa-chevron-down text-xs"></i>
@@ -73,9 +77,9 @@
             <button onclick="resetConversation()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Clear Context">
                 <i class="fa-solid fa-eraser"></i>
             </button>
-            
-            <button onclick="killOllama()" class="bg-red-900/40 hover:bg-red-900/80 text-red-300 px-3 py-1.5 rounded text-sm border border-red-800 transition" title="Kill Ollama Process">
-                <i class="fa-solid fa-power-off"></i>
+
+            <button onclick="restartServer()" class="bg-orange-900/40 hover:bg-orange-900/80 text-orange-300 px-3 py-1.5 rounded text-sm border border-orange-800 transition" title="Restart Ollama Server">
+                <i class="fa-solid fa-rotate-right"></i>
             </button>
         </div>
     </div>
@@ -85,14 +89,13 @@
         <div class="bg-gray-800 border border-gray-700 rounded-xl w-3/4 max-w-5xl h-3/4 flex flex-col shadow-2xl">
             <div class="p-4 border-b border-gray-700 flex justify-between items-center">
                 <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-box-open mr-2"></i>Available Models</h2>
-                <button onclick="closeModelModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="flex gap-2">
+                    <button onclick="fetchModels()" class="text-sm text-blue-400 hover:text-blue-300 mr-4"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                    <button onclick="closeModelModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
             </div>
             <div id="modelGrid" class="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Cards injected here -->
-                <div class="col-span-full text-center text-gray-500 py-10">
-                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
-                    <p>Connecting to Ollama...</p>
-                </div>
             </div>
         </div>
     </div>
@@ -156,13 +159,15 @@
         let selectedModel = null;
         let isGenerating = false;
         let totalTokensUsed = 0;
+        let isOllamaOnline = false;
 
         // --- Init ---
         document.addEventListener('DOMContentLoaded', () => {
-            fetchModels(); // This will trigger auto-start if needed
+            checkHealth();
             fetchPrompts();
             fetchHistory();
             setInterval(updateStats, 500);
+            setInterval(checkHealth, 5000); // Check connection every 5s
             
             const tx = document.getElementById('userInput');
             tx.addEventListener("input", function(){
@@ -177,7 +182,50 @@
             });
         });
 
-        // --- Stats & Status ---
+        // --- Health Check ---
+        async function checkHealth() {
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                const dot = document.getElementById('statusDot');
+                const text = document.getElementById('statusText');
+                
+                if(data.status === 'online') {
+                    isOllamaOnline = true;
+                    dot.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]";
+                    text.innerText = "Online";
+                    text.className = "text-green-400";
+                } else {
+                    isOllamaOnline = false;
+                    dot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]";
+                    text.innerText = "Offline";
+                    text.className = "text-red-400";
+                }
+            } catch(e) {
+                isOllamaOnline = false;
+            }
+        }
+
+        async function restartServer() {
+            if(!confirm("Restart Ollama Server? This will kill the current process and start a new one.")) return;
+            
+            // Set UI to restarting state
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            dot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
+            text.innerText = "Restarting...";
+            text.className = "text-yellow-400";
+
+            try {
+                await fetch('/api/restart', {method: 'POST'});
+                // We don't wait for response because the server might die before responding fully
+                // The checkHealth interval will pick it up when it's back
+            } catch(e) {
+                console.log("Restart command sent");
+            }
+        }
+
+        // --- Stats ---
         async function updateStats() {
             try {
                 const res = await fetch('/api/stats');
@@ -186,23 +234,14 @@
                 document.getElementById('stat-ram').innerText = data.ram_text;
                 document.getElementById('stat-gpu').innerText = data.gpu + '%';
                 document.getElementById('stat-vram').innerText = data.vram_text;
-                
-                // Update Token Counter UI
                 document.getElementById('totalTokens').innerText = totalTokensUsed.toLocaleString();
             } catch(e) {}
-        }
-
-        async function killOllama() {
-            if(confirm("Kill Ollama process? You will need to wait for it to restart next time.")) {
-                await fetch('/api/kill', {method: 'POST'});
-                alert("Process killed.");
-            }
         }
 
         // --- Model Management ---
         function openModelModal() {
             document.getElementById('modelModal').classList.remove('hidden');
-            fetchModels(); // Refresh list
+            fetchModels();
         }
 
         function closeModelModal() {
@@ -211,23 +250,30 @@
 
         async function fetchModels() {
             const grid = document.getElementById('modelGrid');
+            grid.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>Fetching models...</p></div>`;
+            
             try {
                 const res = await fetch('/api/models');
-                if(res.status === 503) {
-                    grid.innerHTML = `<div class="col-span-full text-center text-yellow-500 py-10"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>Starting Ollama Service... Please wait.</p></div>`;
-                    setTimeout(fetchModels, 2000); // Retry
-                    return;
-                }
-                
                 const data = await res.json();
                 grid.innerHTML = '';
+
+                if(data.error) {
+                    grid.innerHTML = `
+                        <div class="col-span-full flex flex-col items-center justify-center text-center py-10 bg-red-900/20 rounded-lg border border-red-800">
+                            <i class="fa-solid fa-triangle-exclamation text-4xl text-red-500 mb-4"></i>
+                            <h3 class="text-xl font-bold text-red-400">Connection Failed</h3>
+                            <p class="text-gray-400 mt-2 mb-4">Ollama is offline.</p>
+                            <button onclick="restartServer()" class="bg-orange-700 hover:bg-orange-600 text-white px-4 py-2 rounded transition">Start Server</button>
+                        </div>
+                    `;
+                    return;
+                }
 
                 if(data.models.length === 0) {
                     grid.innerHTML = `<div class="col-span-full text-center text-gray-500">No models found. Run 'ollama pull <model>' in terminal.</div>`;
                     return;
                 }
 
-                // Render Cards
                 for (const m of data.models) {
                     const sizeGB = (m.size / (1024*1024*1024)).toFixed(1);
                     const isSelected = selectedModel === m.name ? 'selected' : '';
@@ -236,19 +282,16 @@
                     card.className = `model-card bg-gray-700 border border-gray-600 rounded-lg p-4 cursor-pointer relative ${isSelected}`;
                     card.onclick = () => selectModel(m.name);
                     
-                    // Basic Info
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-2">
                             <h3 class="font-bold text-white text-lg truncate w-3/4">${m.name}</h3>
                             <span class="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">${sizeGB} GB</span>
                         </div>
-                        <div class="text-xs text-gray-400 space-y-1" id="details-${m.name.replace(/:/g, '')}">
+                        <div class="text-xs text-gray-400 space-y-1" id="details-${m.name.replace(/[:.]/g, '')}">
                             <div class="flex items-center gap-2"><i class="fa-solid fa-microchip"></i> <span>Loading details...</span></div>
                         </div>
                     `;
                     grid.appendChild(card);
-
-                    // Lazy load details
                     fetchModelDetails(m.name);
                 }
             } catch(e) {
@@ -264,26 +307,26 @@
                     body: JSON.stringify({name})
                 });
                 const data = await res.json();
-                const container = document.getElementById(`details-${name.replace(/:/g, '')}`);
+                const container = document.getElementById(`details-${name.replace(/[:.]/g, '')}`);
                 
                 if(data.details) {
                     container.innerHTML = `
                         <div class="grid grid-cols-2 gap-2 mt-3">
                             <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
                                 <span class="block text-[10px] text-gray-500 uppercase">Family</span>
-                                <span class="text-blue-300 font-mono">${data.details.family || 'N/A'}</span>
+                                <span class="text-blue-300 font-mono truncate">${data.details.family || 'N/A'}</span>
                             </div>
                             <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
                                 <span class="block text-[10px] text-gray-500 uppercase">Params</span>
-                                <span class="text-green-300 font-mono">${data.details.parameter_size || 'N/A'}</span>
+                                <span class="text-green-300 font-mono truncate">${data.details.parameter_size || 'N/A'}</span>
                             </div>
                             <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
                                 <span class="block text-[10px] text-gray-500 uppercase">Quant</span>
-                                <span class="text-purple-300 font-mono">${data.details.quantization_level || 'N/A'}</span>
+                                <span class="text-purple-300 font-mono truncate">${data.details.quantization_level || 'N/A'}</span>
                             </div>
                             <div class="bg-gray-800 p-1.5 rounded border border-gray-600">
                                 <span class="block text-[10px] text-gray-500 uppercase">Format</span>
-                                <span class="text-gray-300 font-mono">${data.details.format || 'GGUF'}</span>
+                                <span class="text-gray-300 font-mono truncate">${data.details.format || 'GGUF'}</span>
                             </div>
                         </div>
                     `;
@@ -295,7 +338,6 @@
             selectedModel = name;
             document.getElementById('currentModelName').innerText = name;
             closeModelModal();
-            // Visual update in modal
             document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
         }
 
@@ -303,6 +345,7 @@
         async function sendMessage() {
             if (isGenerating) return;
             if (!selectedModel) { alert("Please select a model first!"); openModelModal(); return; }
+            if (!isOllamaOnline) { alert("Ollama is offline. Please restart the server."); return; }
             
             const input = document.getElementById('userInput');
             const text = input.value.trim();
@@ -338,10 +381,6 @@
                     body: JSON.stringify({ model: selectedModel, messages: conversationHistory })
                 });
 
-                if(response.status === 503) {
-                    throw new Error("Ollama is starting up... please try again in a few seconds.");
-                }
-
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
@@ -357,6 +396,10 @@
                         try {
                             const json = JSON.parse(line);
                             
+                            if(json.error) {
+                                throw new Error(json.error);
+                            }
+
                             if (json.message && json.message.content) {
                                 document.getElementById('loadingText').innerText = "Generating tokens...";
                                 fullResponse += json.message.content;
@@ -369,7 +412,6 @@
                                 conversationHistory.push({ role: "assistant", content: fullResponse });
                                 saveConversation(selectedModel);
                                 
-                                // Update Token Stats
                                 if(json.eval_count) {
                                     const tps = (json.eval_count / (json.eval_duration / 1e9)).toFixed(1);
                                     const tokens = (json.prompt_eval_count || 0) + json.eval_count;
@@ -445,7 +487,6 @@
                 </div>`;
         }
 
-        // --- History & Prompts (Same as before) ---
         async function saveConversation(model) {
             if(conversationHistory.length < 2) return;
             const res = await fetch('/api/history', {

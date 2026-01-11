@@ -21,4 +21,7 @@ features needed
 - add copy button for codeblocks
 - When you are loading any model, say loaing model. 
 - tell the tokens per second for conversation as small text and total token per conv
-- add model page which contains details for model such as model params, size, company, etc. Only fill up the known details and store them in a model.json file. the user can manually add details about models into it. Everytime the program starts, update this file with new models if available, dont over-write through the details added.
+- add model page which contains details for model such as model params, size, company, etc. 
+
+- make sure the vram for gpu is working
+- add a restart server option, which pkills ollama and starts the server
