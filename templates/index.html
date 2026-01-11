@@ -4,115 +4,125 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local LLM Studio</title>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Marked (Markdown Parser) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Highlight.js (Code Coloring) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-
-        /* Markdown Styles */
-        .prose pre { background-color: #111827 !important; padding: 1rem; border-radius: 0.5rem; border: 1px solid #374151; }
+        
+        /* Markdown & Code Styles */
+        .prose pre { background-color: #111827 !important; padding: 1rem; border-radius: 0.5rem; border: 1px solid #374151; position: relative; margin-top: 0.5rem; margin-bottom: 0.5rem; }
         .prose code { color: #e5e7eb; background-color: #374151; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; }
         .prose pre code { background-color: transparent; padding: 0; color: inherit; }
-        .prose table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .prose table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
         .prose th, .prose td { border: 1px solid #4b5563; padding: 0.5rem; text-align: left; }
         .prose th { background-color: #374151; }
+        
+        /* Copy Button */
+        .copy-btn {
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            background: #374151; color: #9ca3af;
+            padding: 0.2rem 0.5rem; border-radius: 0.25rem;
+            font-size: 0.75rem; cursor: pointer; border: 1px solid #4b5563;
+        }
+        .copy-btn:hover { background: #4b5563; color: white; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- Top Bar: Stats & Controls -->
-    <div class="h-14 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 shrink-0">
-        <div class="flex items-center gap-4">
-            <h1 class="text-lg font-bold text-blue-400"><i class="fa-solid fa-robot mr-2"></i>Local Studio</h1>
+    <!-- Top Bar -->
+    <div class="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 shrink-0 shadow-md z-10">
+        <div class="flex items-center gap-6">
+            <h1 class="text-xl font-bold text-blue-400 tracking-tight"><i class="fa-solid fa-layer-group mr-2"></i>Ollama Studio</h1>
             
-            <!-- Stats Widgets -->
-            <div class="flex gap-3 text-xs font-mono">
-                <div class="bg-gray-700 px-2 py-1 rounded border border-gray-600" title="CPU Usage">
-                    <span class="text-gray-400">CPU:</span> <span id="stat-cpu" class="text-green-400">0%</span>
+            <!-- Hardware Stats Boxes -->
+            <div class="flex gap-3">
+                <!-- CPU/RAM Box -->
+                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-32">
+                    <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold">
+                        <span>CPU</span> <span>RAM</span>
+                    </div>
+                    <div class="flex justify-between text-xs font-mono text-green-400">
+                        <span id="stat-cpu">0%</span> <span id="stat-ram">0/0GB</span>
+                    </div>
                 </div>
-                <div class="bg-gray-700 px-2 py-1 rounded border border-gray-600" title="RAM Usage">
-                    <span class="text-gray-400">RAM:</span> <span id="stat-ram" class="text-yellow-400">0%</span> <span id="stat-ram-gb" class="text-gray-500 ml-1"></span>
-                </div>
-                <div class="bg-gray-700 px-2 py-1 rounded border border-gray-600 hidden" id="gpu-widget" title="GPU Usage">
-                    <span class="text-gray-400">GPU:</span> <span id="stat-gpu" class="text-purple-400">0%</span>
-                    <span class="text-gray-400 ml-2">VRAM:</span> <span id="stat-vram" class="text-purple-400">0%</span>
+                <!-- GPU/VRAM Box -->
+                <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-32">
+                    <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold">
+                        <span>GPU</span> <span>VRAM</span>
+                    </div>
+                    <div class="flex justify-between text-xs font-mono text-purple-400">
+                        <span id="stat-gpu">0%</span> <span id="stat-vram">0/0GB</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="flex items-center gap-3">
-            <select id="modelSelect" class="bg-gray-700 border border-gray-600 text-sm rounded px-2 py-1 outline-none focus:border-blue-500">
+            <select id="modelSelect" class="bg-gray-700 border border-gray-600 text-sm rounded px-3 py-1.5 outline-none focus:border-blue-500 shadow-sm">
                 <option>Loading models...</option>
             </select>
-            <button onclick="resetConversation()" class="bg-red-900/50 hover:bg-red-800 text-red-200 px-3 py-1 rounded text-sm border border-red-800 transition">
-                <i class="fa-solid fa-trash-can mr-1"></i> Clear Context
+            
+            <button onclick="resetConversation()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Clear Context">
+                <i class="fa-solid fa-eraser"></i>
+            </button>
+            
+            <button onclick="killOllama()" class="bg-red-900/40 hover:bg-red-900/80 text-red-300 px-3 py-1.5 rounded text-sm border border-red-800 transition" title="Kill Ollama Process">
+                <i class="fa-solid fa-power-off"></i>
             </button>
         </div>
     </div>
 
     <div class="flex flex-1 overflow-hidden">
         <!-- Sidebar -->
-        <div class="w-72 bg-gray-800 border-r border-gray-700 flex flex-col">
-            
-            <!-- Tabs -->
+        <div class="w-72 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0">
             <div class="flex border-b border-gray-700">
-                <button onclick="switchTab('prompts')" id="tab-prompts" class="flex-1 py-2 text-sm font-semibold bg-gray-700 text-blue-400">Prompts</button>
-                <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-2 text-sm font-semibold text-gray-400 hover:bg-gray-700">History</button>
+                <button onclick="switchTab('prompts')" id="tab-prompts" class="flex-1 py-3 text-sm font-semibold bg-gray-700 text-blue-400 border-b-2 border-blue-400">Prompts</button>
+                <button onclick="switchTab('history')" id="tab-history" class="flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent">History</button>
             </div>
 
-            <!-- Prompts Panel -->
             <div id="panel-prompts" class="flex-1 overflow-y-auto p-3 space-y-2">
-                <button onclick="createNewPrompt()" class="w-full border border-dashed border-gray-600 text-gray-400 p-2 rounded text-xs hover:border-blue-500 hover:text-blue-400 transition mb-2">
-                    + Create New Prompt
-                </button>
+                <button onclick="createNewPrompt()" class="w-full border border-dashed border-gray-600 text-gray-400 p-2 rounded text-xs hover:border-blue-500 hover:text-blue-400 transition mb-2">+ New Prompt</button>
                 <div id="promptsList" class="space-y-2"></div>
             </div>
 
-            <!-- History Panel -->
             <div id="panel-history" class="flex-1 overflow-y-auto p-3 space-y-2 hidden">
                 <button onclick="clearHistory()" class="text-xs text-red-400 hover:underline w-full text-right mb-2">Clear All</button>
                 <div id="historyList" class="space-y-2"></div>
             </div>
 
-            <!-- System Prompt Preview -->
-            <div class="p-3 border-t border-gray-700 bg-gray-900/50">
-                <label class="text-xs font-bold text-gray-500 uppercase">Active System Prompt</label>
+            <div class="p-3 border-t border-gray-700 bg-gray-900/30">
+                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">System Prompt</label>
                 <div id="activeSystemPromptName" class="text-sm font-semibold text-blue-400 truncate">Default</div>
-                <p id="activeSystemPromptPreview" class="text-xs text-gray-500 truncate">You are a helpful assistant.</p>
+                <p id="activeSystemPromptPreview" class="text-xs text-gray-500 truncate opacity-70">You are a helpful assistant.</p>
             </div>
         </div>
 
-        <!-- Main Chat Area -->
+        <!-- Main Chat -->
         <div class="flex-1 flex flex-col bg-gray-900 relative">
-            <!-- Chat Window -->
-            <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
-                <!-- Welcome Message -->
-                <div class="text-center text-gray-500 mt-20">
-                    <i class="fa-solid fa-bolt text-4xl mb-4 opacity-20"></i>
-                    <p>Select a model and start chatting.</p>
+            <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth pb-32">
+                <div class="text-center text-gray-600 mt-24">
+                    <i class="fa-solid fa-microchip text-5xl mb-4 opacity-20"></i>
+                    <p class="text-sm">Ready to generate.</p>
                 </div>
             </div>
 
             <!-- Input Area -->
-            <div class="p-4 bg-gray-800 border-t border-gray-700">
+            <div class="p-4 bg-gray-800 border-t border-gray-700 absolute bottom-0 w-full">
                 <div class="max-w-4xl mx-auto relative">
-                    <textarea id="userInput" rows="1" placeholder="Type a message (Shift+Enter for new line)..." 
-                        class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:border-blue-500 resize-none overflow-hidden"
+                    <div id="loadingIndicator" class="hidden absolute -top-8 left-0 text-xs text-blue-400 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> <span id="loadingText">Generating...</span>
+                    </div>
+                    <textarea id="userInput" rows="1" placeholder="Type a message..." 
+                        class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:border-blue-500 resize-none overflow-hidden shadow-inner text-sm"
                         style="min-height: 50px; max-height: 200px;"></textarea>
-                    <button onclick="sendMessage()" id="sendBtn" class="absolute right-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition">
+                    <button onclick="sendMessage()" id="sendBtn" class="absolute right-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition shadow-lg">
                         <i class="fa-solid fa-paper-plane"></i>
                     </button>
                 </div>
@@ -122,18 +132,18 @@
 
     <script>
         // --- State ---
-        let conversationHistory = []; // Current active conversation
+        let conversationHistory = [];
+        let currentConversationId = null; // UUID for current chat session
         let currentSystemPrompt = "You are a helpful assistant.";
         let isGenerating = false;
 
-        // --- Initialization ---
+        // --- Init ---
         document.addEventListener('DOMContentLoaded', () => {
             fetchModels();
             fetchPrompts();
             fetchHistory();
-            setInterval(updateStats, 2000); // Poll stats every 2s
+            setInterval(updateStats, 250); // 0.25s refresh
             
-            // Auto-resize textarea
             const tx = document.getElementById('userInput');
             tx.addEventListener("input", function(){
                 this.style.height = "auto";
@@ -147,22 +157,23 @@
             });
         });
 
-        // --- Stats Logic ---
+        // --- Stats ---
         async function updateStats() {
             try {
                 const res = await fetch('/api/stats');
                 const data = await res.json();
-                
                 document.getElementById('stat-cpu').innerText = data.cpu + '%';
-                document.getElementById('stat-ram').innerText = data.ram_percent + '%';
-                document.getElementById('stat-ram-gb').innerText = `(${data.ram_text})`;
+                document.getElementById('stat-ram').innerText = data.ram_text;
+                document.getElementById('stat-gpu').innerText = data.gpu + '%';
+                document.getElementById('stat-vram').innerText = data.vram_text;
+            } catch(e) {}
+        }
 
-                if(data.gpu > 0 || data.vram_percent > 0) {
-                    document.getElementById('gpu-widget').classList.remove('hidden');
-                    document.getElementById('stat-gpu').innerText = data.gpu + '%';
-                    document.getElementById('stat-vram').innerText = data.vram_percent + '%';
-                }
-            } catch(e) { console.error("Stats error", e); }
+        async function killOllama() {
+            if(confirm("Are you sure you want to kill the Ollama process?")) {
+                await fetch('/api/kill', {method: 'POST'});
+                alert("Kill command sent.");
+            }
         }
 
         // --- Chat Logic ---
@@ -174,36 +185,35 @@
 
             if (!text) return;
 
-            // UI Updates
+            // UI Prep
             input.value = '';
             input.style.height = 'auto';
             isGenerating = true;
-            document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-circle-stop animate-pulse"></i>';
+            document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('loadingText').innerText = "Loading model & generating...";
 
-            // 1. Setup Context if empty
+            // Init Context
             if (conversationHistory.length === 0) {
                 conversationHistory.push({ role: "system", content: currentSystemPrompt });
-                // Remove welcome message if exists
                 const chatWin = document.getElementById('chatWindow');
                 if(chatWin.querySelector('.text-center')) chatWin.innerHTML = '';
             }
 
-            // 2. Add User Message
             conversationHistory.push({ role: "user", content: text });
             appendMessage("user", text);
 
-            // 3. Create AI Message Placeholder
             const aiMsgDiv = appendMessage("assistant", ""); 
+            const contentDiv = aiMsgDiv.querySelector('.msg-content');
+            const metaDiv = aiMsgDiv.querySelector('.msg-meta');
+            
             let fullResponse = "";
 
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: conversationHistory
-                    })
+                    body: JSON.stringify({ model: model, messages: conversationHistory })
                 });
 
                 const reader = response.body.getReader();
@@ -220,54 +230,82 @@
                         if (!line.trim()) continue;
                         try {
                             const json = JSON.parse(line);
+                            
+                            // Handle Content
                             if (json.message && json.message.content) {
-                                const content = json.message.content;
-                                fullResponse += content;
-                                // Render Markdown Live
-                                aiMsgDiv.innerHTML = marked.parse(fullResponse);
-                                // Highlight Code Blocks
-                                aiMsgDiv.querySelectorAll('pre code').forEach((block) => {
-                                    hljs.highlightElement(block);
-                                });
+                                document.getElementById('loadingText').innerText = "Generating...";
+                                fullResponse += json.message.content;
+                                contentDiv.innerHTML = marked.parse(fullResponse);
+                                highlightCode(contentDiv);
                                 scrollToBottom();
                             }
+                            
+                            // Handle Final Stats (Done)
                             if (json.done) {
                                 conversationHistory.push({ role: "assistant", content: fullResponse });
-                                saveConversationToHistory(model);
+                                saveConversation(model);
+                                
+                                // Calculate Tokens per Second
+                                if(json.eval_count && json.eval_duration) {
+                                    const tps = (json.eval_count / (json.eval_duration / 1e9)).toFixed(1);
+                                    metaDiv.innerText = `${tps} T/s`;
+                                }
                             }
-                        } catch (e) { console.error("Parse error", e); }
+                        } catch (e) { console.error(e); }
                     }
                 }
-
             } catch (e) {
-                aiMsgDiv.innerHTML += `<br><span class="text-red-400">Error: ${e.message}</span>`;
+                contentDiv.innerHTML += `<br><span class="text-red-400">Error: ${e.message}</span>`;
             }
 
             isGenerating = false;
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+            document.getElementById('loadingIndicator').classList.add('hidden');
         }
 
         function appendMessage(role, text) {
             const div = document.createElement('div');
             const isUser = role === 'user';
-            
             div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
             
             const bubble = document.createElement('div');
             bubble.className = isUser 
-                ? "bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[80%]" 
-                : "bg-gray-800 border border-gray-700 text-gray-200 px-6 py-4 rounded-2xl rounded-tl-none max-w-[90%] prose prose-invert";
+                ? "bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[85%] shadow-lg" 
+                : "bg-gray-800 border border-gray-700 text-gray-200 px-5 py-4 rounded-2xl rounded-tl-none max-w-[90%] shadow-lg min-w-[200px]";
             
-            if(isUser) {
-                bubble.innerText = text;
-            } else {
-                bubble.innerHTML = '<span class="animate-pulse">...</span>'; // Loading state
-            }
+            // Structure: Content + Meta (for T/s)
+            bubble.innerHTML = `
+                <div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">
+                    ${isUser ? text : '<span class="animate-pulse">...</span>'}
+                </div>
+                ${!isUser ? '<div class="msg-meta text-[10px] text-gray-500 mt-2 text-right font-mono h-4"></div>' : ''}
+            `;
 
             div.appendChild(bubble);
             document.getElementById('chatWindow').appendChild(div);
             scrollToBottom();
             return bubble;
+        }
+
+        function highlightCode(element) {
+            element.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+            // Add Copy Buttons
+            element.querySelectorAll('pre').forEach(pre => {
+                if(pre.querySelector('.copy-btn')) return;
+                
+                const btn = document.createElement('button');
+                btn.className = 'copy-btn';
+                btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                btn.onclick = () => {
+                    const code = pre.querySelector('code').innerText;
+                    navigator.clipboard.writeText(code);
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+                    setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 2000);
+                };
+                pre.appendChild(btn);
+            });
         }
 
         function scrollToBottom() {
@@ -277,96 +315,29 @@
 
         function resetConversation() {
             conversationHistory = [];
+            currentConversationId = null; // Reset ID to create new history block
             document.getElementById('chatWindow').innerHTML = `
-                <div class="text-center text-gray-500 mt-20">
-                    <i class="fa-solid fa-rotate-right text-4xl mb-4 opacity-20"></i>
-                    <p>Context cleared. Start a new topic.</p>
+                <div class="text-center text-gray-600 mt-24">
+                    <i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i>
+                    <p class="text-sm">Context cleared.</p>
                 </div>`;
         }
 
-        // --- Prompts Management ---
-        async function fetchPrompts() {
-            const res = await fetch('/api/prompts');
-            const prompts = await res.json();
-            const list = document.getElementById('promptsList');
-            list.innerHTML = '';
-
-            Object.keys(prompts).forEach(name => {
-                const div = document.createElement('div');
-                div.className = "group flex items-center justify-between bg-gray-700/50 p-2 rounded border border-transparent hover:border-gray-600";
-                
-                div.innerHTML = `
-                    <div class="cursor-pointer flex-1 truncate" onclick="setPrompt('${name}', this)">
-                        <div class="text-sm font-medium text-gray-300 group-hover:text-white">${name}</div>
-                        <div class="text-xs text-gray-500 truncate">${prompts[name]}</div>
-                    </div>
-                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="editPrompt('${name}')" class="text-gray-400 hover:text-blue-400"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deletePrompt('${name}')" class="text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                `;
-                // Store content in data attribute for easy access
-                div.dataset.content = prompts[name];
-                list.appendChild(div);
-            });
-        }
-
-        async function createNewPrompt() {
-            const name = prompt("Prompt Name:");
-            if(!name) return;
-            const content = prompt("System Instructions:");
-            if(!content) return;
+        // --- History & Prompts ---
+        async function saveConversation(model) {
+            if(conversationHistory.length < 2) return;
             
-            await fetch('/api/prompts', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, content})
-            });
-            fetchPrompts();
-        }
-
-        async function deletePrompt(name) {
-            if(confirm(`Delete "${name}"?`)) {
-                await fetch(`/api/prompts?name=${name}`, { method: 'DELETE' });
-                fetchPrompts();
-            }
-        }
-
-        async function editPrompt(name) {
-            // Find current content
-            const res = await fetch('/api/prompts');
-            const data = await res.json();
-            const newContent = prompt("Edit Instructions:", data[name]);
-            if(newContent) {
-                await fetch('/api/prompts', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name, content: newContent})
-                });
-                fetchPrompts();
-            }
-        }
-
-        function setPrompt(name, el) {
-            currentSystemPrompt = el.parentElement.dataset.content;
-            document.getElementById('activeSystemPromptName').innerText = name;
-            document.getElementById('activeSystemPromptPreview').innerText = currentSystemPrompt;
-            resetConversation(); // Apply new persona immediately
-        }
-
-        // --- History Management ---
-        async function saveConversationToHistory(model) {
-            // Only save if it's a substantial conversation
-            if(conversationHistory.length < 3) return; 
-            
-            await fetch('/api/history', {
+            const res = await fetch('/api/history', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
+                    id: currentConversationId, // Send current ID (null if new)
                     model: model,
                     messages: conversationHistory
                 })
             });
+            const data = await res.json();
+            currentConversationId = data.id; // Update ID to keep saving to same block
             fetchHistory();
         }
 
@@ -375,50 +346,87 @@
             const history = await res.json();
             const list = document.getElementById('historyList');
             list.innerHTML = '';
-
             history.forEach(h => {
                 const div = document.createElement('div');
-                div.className = "bg-gray-700/30 p-2 rounded border border-gray-700 hover:bg-gray-700 cursor-pointer transition";
-                // Get first user message for title
-                const firstUserMsg = h.messages.find(m => m.role === 'user')?.content || "Empty Chat";
-                
+                div.className = "bg-gray-700/30 p-2 rounded border border-gray-700 hover:bg-gray-700 cursor-pointer transition group";
+                const firstMsg = h.messages.find(m => m.role === 'user')?.content || "Empty";
                 div.innerHTML = `
-                    <div class="text-xs text-blue-400 mb-1 flex justify-between">
+                    <div class="text-[10px] text-blue-400 mb-1 flex justify-between">
                         <span>${h.model}</span>
-                        <span class="text-gray-500">${h.timestamp}</span>
+                        <span class="text-gray-500">${h.timestamp.split(' ')[1]}</span>
                     </div>
-                    <div class="text-sm text-gray-300 truncate">${firstUserMsg}</div>
+                    <div class="text-xs text-gray-300 truncate">${firstMsg}</div>
                 `;
-                div.onclick = () => loadHistory(h.messages);
+                div.onclick = () => loadHistory(h);
                 list.appendChild(div);
             });
         }
 
-        function loadHistory(messages) {
-            conversationHistory = messages;
+        function loadHistory(h) {
+            currentConversationId = h.id;
+            conversationHistory = h.messages;
             const chatWin = document.getElementById('chatWindow');
             chatWin.innerHTML = '';
             
-            messages.forEach(msg => {
-                if(msg.role === 'system') return; // Don't show system prompt bubble
+            h.messages.forEach(msg => {
+                if(msg.role === 'system') return;
                 const bubble = appendMessage(msg.role, "");
+                const contentDiv = bubble.querySelector('.msg-content');
                 if(msg.role === 'assistant') {
-                    bubble.innerHTML = marked.parse(msg.content);
-                    bubble.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+                    contentDiv.innerHTML = marked.parse(msg.content);
+                    highlightCode(contentDiv);
                 } else {
-                    bubble.innerText = msg.content;
+                    contentDiv.innerText = msg.content;
                 }
             });
         }
 
+        async function fetchPrompts() {
+            const res = await fetch('/api/prompts');
+            const prompts = await res.json();
+            const list = document.getElementById('promptsList');
+            list.innerHTML = '';
+            Object.keys(prompts).forEach(name => {
+                const div = document.createElement('div');
+                div.className = "group flex items-center justify-between bg-gray-700/50 p-2 rounded border border-transparent hover:border-gray-600 cursor-pointer";
+                div.innerHTML = `
+                    <div class="flex-1 truncate" onclick="setPrompt('${name}', '${prompts[name]}')">
+                        <div class="text-xs font-bold text-gray-300 group-hover:text-white">${name}</div>
+                    </div>
+                    <button onclick="deletePrompt('${name}')" class="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function createNewPrompt() {
+            const name = prompt("Name:"); if(!name) return;
+            const content = prompt("System Prompt:"); if(!content) return;
+            await fetch('/api/prompts', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, content}) });
+            fetchPrompts();
+        }
+
+        async function deletePrompt(name) {
+            if(confirm("Delete?")) {
+                await fetch(`/api/prompts?name=${name}`, { method: 'DELETE' });
+                fetchPrompts();
+            }
+        }
+
+        function setPrompt(name, content) {
+            currentSystemPrompt = content;
+            document.getElementById('activeSystemPromptName').innerText = name;
+            document.getElementById('activeSystemPromptPreview').innerText = content;
+            resetConversation();
+        }
+
         async function clearHistory() {
-            if(confirm("Delete all chat history?")) {
+            if(confirm("Clear all history?")) {
                 await fetch('/api/history', { method: 'DELETE' });
                 fetchHistory();
             }
         }
 
-        // --- Helpers ---
         async function fetchModels() {
             const res = await fetch('/api/models');
             const data = await res.json();
@@ -435,11 +443,11 @@
         function switchTab(tab) {
             document.getElementById('panel-prompts').classList.add('hidden');
             document.getElementById('panel-history').classList.add('hidden');
-            document.getElementById('tab-prompts').className = "flex-1 py-2 text-sm font-semibold text-gray-400 hover:bg-gray-700";
-            document.getElementById('tab-history').className = "flex-1 py-2 text-sm font-semibold text-gray-400 hover:bg-gray-700";
-
+            document.getElementById('tab-prompts').className = "flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent";
+            document.getElementById('tab-history').className = "flex-1 py-3 text-sm font-semibold text-gray-400 hover:bg-gray-700 border-b-2 border-transparent";
+            
             document.getElementById(`panel-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).className = "flex-1 py-2 text-sm font-semibold bg-gray-700 text-blue-400";
+            document.getElementById(`tab-${tab}`).className = "flex-1 py-3 text-sm font-semibold bg-gray-700 text-blue-400 border-b-2 border-blue-400";
         }
     </script>
 </body>

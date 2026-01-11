@@ -1,5 +1,40 @@
 [
   {
+    "id": "0ff2c48f-8669-48f6-b0b2-8143374f0adb",
+    "timestamp": "2026-01-11 14:59",
+    "model": "qwen3:0.6b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hey"
+      },
+      {
+        "role": "assistant",
+        "content": "Hey! How can I assist you today? \ud83d\ude0a"
+      },
+      {
+        "role": "user",
+        "content": "what is your name"
+      },
+      {
+        "role": "assistant",
+        "content": "I don't have a name, but I'm here to help! How can I assist you today? \ud83d\ude0a"
+      },
+      {
+        "role": "user",
+        "content": "1000 word story"
+      },
+      {
+        "role": "assistant",
+        "content": "Sure! Could you please specify the type of story you'd like me to create\u2014such as a fantasy, mystery, historical, or something else? I'll tailor the story to your preferences and ensure it's around 1000 words. Let me know how I can help! \ud83d\ude0a"
+      }
+    ]
+  },
+  {
     "id": 1768118384,
     "timestamp": "2026-01-11 13:29",
     "model": "gpt-oss:normal",
