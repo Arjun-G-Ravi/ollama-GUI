@@ -16,6 +16,7 @@ OLLAMA_API_BASE = "http://localhost:11434/api"
 PROMPTS_FILE = "prompts.json"
 HISTORY_FILE = "history.json"
 FAVORITES_FILE = "favorites.json"
+MODEL_CARDS_FILE = "model_cards.json" # New file for templates
 
 # --- Helpers ---
 def load_json(filename, default):
@@ -54,7 +55,6 @@ def restart_server():
         
         time.sleep(1)
         
-        # Start new process
         subprocess.Popen(
             ["ollama", "serve"], 
             stdout=subprocess.DEVNULL, 
@@ -67,18 +67,15 @@ def restart_server():
 
 @app.route('/api/stats')
 def get_stats():
-    # CPU & RAM
     cpu_usage = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory()
     ram_str = f"{round(ram.used / (1024**3), 1)} / {int(round(ram.total / (1024**3), 0))} GB"
 
-    # GPU (NVIDIA)
     gpu_usage = 0
     vram_str = "N/A"
     
     if shutil.which('nvidia-smi'):
         try:
-            # Robust CSV parsing
             result = subprocess.check_output(
                 ['nvidia-smi', '--query-gpu=utilization.gpu,memory.used,memory.total', '--format=csv,nounits,noheader'], 
                 encoding='utf-8'
@@ -115,6 +112,11 @@ def get_model_details():
         return jsonify(resp.json())
     except:
         return jsonify({"details": {}})
+
+# --- New Route for Custom Cards ---
+@app.route('/api/custom_cards')
+def get_custom_cards():
+    return jsonify(load_json(MODEL_CARDS_FILE, {}))
 
 @app.route('/api/favorites', methods=['GET', 'POST'])
 def handle_favorites():
@@ -181,7 +183,6 @@ def chat():
     
     def generate():
         try:
-            # Stream response from Ollama
             with requests.post(f"{OLLAMA_API_BASE}/chat", json={**data, "stream": True}, stream=True) as r:
                 for line in r.iter_lines():
                     if line:
@@ -192,8 +193,8 @@ def chat():
     return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
 if __name__ == '__main__':
-    # Ensure files exist
     load_json(PROMPTS_FILE, {"Default": "You are a helpful assistant."})
     load_json(HISTORY_FILE, [])
     load_json(FAVORITES_FILE, [])
+    load_json(MODEL_CARDS_FILE, {}) # Ensure custom cards file exists
     app.run(port=5000, debug=True)

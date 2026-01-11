@@ -107,7 +107,6 @@
                 <i class="fa-solid fa-chevron-down text-xs"></i>
             </button>
             
-            <!-- New Chat Button -->
             <button onclick="newChat()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Start New Chat">
                 <i class="fa-solid fa-plus mr-1"></i> New Chat
             </button>
@@ -188,7 +187,7 @@
         let totalTokensUsed = 0;
         let isOllamaOnline = false;
         let favoriteModels = [];
-        let abortController = null; // For stopping generation
+        let abortController = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             checkHealth();
@@ -256,7 +255,7 @@
             fetchModels();
         }
 
-        // --- Models ---
+        // --- Models & Custom Cards ---
         function openModelModal() {
             document.getElementById('modelModal').classList.remove('hidden');
             fetchModels();
@@ -267,8 +266,14 @@
             const grid = document.getElementById('modelGrid');
             grid.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>Fetching models...</p></div>`;
             try {
+                // Fetch Ollama Models
                 const res = await fetch('/api/models');
                 const data = await res.json();
+                
+                // Fetch Custom Card Data
+                const customRes = await fetch('/api/custom_cards');
+                const customData = await customRes.json();
+
                 grid.innerHTML = '';
                 if(data.error) {
                     grid.innerHTML = `<div class="col-span-full text-center text-red-500">Ollama is offline. <button onclick="restartServer()" class="underline">Restart Server</button></div>`;
@@ -288,8 +293,16 @@
                     const isSelected = selectedModel === m.name ? 'selected' : '';
                     const isFav = favoriteModels.includes(m.name);
                     
+                    // Get Custom Data
+                    const custom = customData[m.name] || {};
+                    const description = custom.description ? `<p class="text-xs text-gray-400 mt-2 italic line-clamp-2">${custom.description}</p>` : '';
+                    const tags = custom.tags ? `<div class="mt-2 flex flex-wrap gap-1">${custom.tags.map(t => `<span class="text-[10px] bg-blue-900/50 text-blue-200 px-1.5 py-0.5 rounded border border-blue-800">${t}</span>`).join('')}</div>` : '';
+                    const iconClass = custom.icon || 'fa-microchip';
+                    const borderColor = custom.color ? custom.color : 'border-gray-600';
+
                     const card = document.createElement('div');
-                    card.className = `model-card bg-gray-700 border border-gray-600 rounded-lg p-4 cursor-pointer relative ${isSelected}`;
+                    // Use custom border color if provided, else default
+                    card.className = `model-card bg-gray-700 border ${borderColor} rounded-lg p-4 cursor-pointer relative ${isSelected}`;
                     card.onclick = () => selectModel(m.name);
                     
                     card.innerHTML = `
@@ -298,12 +311,18 @@
                                 <i class="fa-solid fa-star"></i>
                             </button>
                         </div>
-                        <div class="flex justify-between items-start mb-2 pr-6">
-                            <h3 class="font-bold text-white text-lg truncate w-full">${m.name}</h3>
+                        <div class="flex justify-between items-start mb-1 pr-6">
+                            <h3 class="font-bold text-white text-lg truncate w-full flex items-center gap-2">
+                                <i class="fa-solid ${iconClass} text-xs opacity-50"></i> ${m.name}
+                            </h3>
                         </div>
-                        <span class="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">${sizeGB} GB</span>
-                        <div class="text-xs text-gray-400 space-y-1 mt-2" id="details-${m.name.replace(/[:.]/g, '')}">
-                            <div class="flex items-center gap-2"><i class="fa-solid fa-microchip"></i> <span>Loading details...</span></div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">${sizeGB} GB</span>
+                        </div>
+                        ${description}
+                        ${tags}
+                        <div class="text-xs text-gray-500 space-y-1 mt-3 pt-2 border-t border-gray-600" id="details-${m.name.replace(/[:.]/g, '')}">
+                            <div class="flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> <span>Loading specs...</span></div>
                         </div>
                     `;
                     grid.appendChild(card);
@@ -319,10 +338,11 @@
                 const container = document.getElementById(`details-${name.replace(/[:.]/g, '')}`);
                 if(data.details) {
                     container.innerHTML = `
-                        <div class="grid grid-cols-2 gap-2 mt-3">
-                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600"><span class="block text-[10px] text-gray-500 uppercase">Family</span><span class="text-blue-300 font-mono truncate">${data.details.family || 'N/A'}</span></div>
-                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600"><span class="block text-[10px] text-gray-500 uppercase">Params</span><span class="text-green-300 font-mono truncate">${data.details.parameter_size || 'N/A'}</span></div>
-                            <div class="bg-gray-800 p-1.5 rounded border border-gray-600"><span class="block text-[10px] text-gray-500 uppercase">Quant</span><span class="text-purple-300 font-mono truncate">${data.details.quantization_level || 'N/A'}</span></div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><span class="text-[10px] text-gray-500 uppercase">Family</span> <span class="text-blue-300 font-mono">${data.details.family || 'N/A'}</span></div>
+                            <div><span class="text-[10px] text-gray-500 uppercase">Quant</span> <span class="text-purple-300 font-mono">${data.details.quantization_level || 'N/A'}</span></div>
+                            <div><span class="text-[10px] text-gray-500 uppercase">Params</span> <span class="text-green-300 font-mono">${data.details.parameter_size || 'N/A'}</span></div>
+                            <div><span class="text-[10px] text-gray-500 uppercase">Ctx</span> <span class="text-gray-300 font-mono">${data.details.context_length || 'N/A'}</span></div>
                         </div>`;
                 }
             } catch(e) {}
@@ -365,8 +385,6 @@
 
             input.value = ''; input.style.height = 'auto';
             isGenerating = true;
-            
-            // Init AbortController
             abortController = new AbortController();
 
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
@@ -389,7 +407,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ model: selectedModel, messages: conversationHistory }),
-                    signal: abortController.signal // Pass signal for aborting
+                    signal: abortController.signal
                 });
 
                 const reader = response.body.getReader();
@@ -499,23 +517,15 @@
 
         function scrollToBottom() { const win = document.getElementById('chatWindow'); win.scrollTop = win.scrollHeight; }
         
-        // --- New Chat Logic ---
         function newChat() {
             if(isGenerating) stopGeneration();
             conversationHistory = [];
             currentConversationId = null;
-            totalTokensUsed = 0; // Reset tokens
-            document.getElementById('totalTokens').innerText = "0"; // Update UI
-            document.getElementById('chatWindow').innerHTML = `
-                <div class="text-center text-gray-600 mt-24">
-                    <i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i>
-                    <p class="text-sm">New chat started.</p>
-                </div>`;
+            totalTokensUsed = 0;
+            document.getElementById('totalTokens').innerText = "0";
+            document.getElementById('chatWindow').innerHTML = `<div class="text-center text-gray-600 mt-24"><i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i><p class="text-sm">New chat started.</p></div>`;
         }
         
-        // Deprecated resetConversation in favor of newChat, but keeping for prompt switching
-        function resetConversation() { newChat(); }
-
         // --- History & Prompts ---
         async function saveConversation(model) {
             if(conversationHistory.length < 2) return;
