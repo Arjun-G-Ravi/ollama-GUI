@@ -35,7 +35,6 @@
         .model-card:hover { transform: translateY(-2px); border-color: #60a5fa; }
         .model-card.selected { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
 
-        /* Thinking Box Styles */
         details.thinking-box {
             background-color: #1f2937;
             border-left: 3px solid #60a5fa;
@@ -77,20 +76,17 @@
                 <span id="statusText" class="text-gray-400">Checking...</span>
             </div>
 
-            <!-- Hardware Stats -->
             <div class="flex gap-3">
                 <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-36">
                     <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>CPU</span> <span>RAM</span></div>
                     <div class="flex justify-between items-center text-xs font-mono text-green-400 gap-2">
-                        <span id="stat-cpu">0%</span> 
-                        <span id="stat-ram">0 / 0 GB</span>
+                        <span id="stat-cpu">0%</span> <span id="stat-ram">0 / 0 GB</span>
                     </div>
                 </div>
                 <div class="bg-gray-900 border border-gray-600 rounded px-3 py-1 flex flex-col justify-center w-36">
                     <div class="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>GPU</span> <span>VRAM</span></div>
                     <div class="flex justify-between items-center text-xs font-mono text-purple-400 gap-2">
-                        <span id="stat-gpu">0%</span> 
-                        <span id="stat-vram">0 / 0 GB</span>
+                        <span id="stat-gpu">0%</span> <span id="stat-vram">0 / 0 GB</span>
                     </div>
                 </div>
             </div>
@@ -106,11 +102,9 @@
                 <span id="currentModelName">Select Model</span>
                 <i class="fa-solid fa-chevron-down text-xs"></i>
             </button>
-            
             <button onclick="newChat()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded text-sm border border-gray-600 transition" title="Start New Chat">
                 <i class="fa-solid fa-plus mr-1"></i> New Chat
             </button>
-            
             <button onclick="restartServer()" class="bg-orange-900/40 hover:bg-orange-900/80 text-orange-300 px-3 py-1.5 rounded text-sm border border-orange-800 transition" title="Restart Ollama Server">
                 <i class="fa-solid fa-rotate-right"></i>
             </button>
@@ -127,13 +121,14 @@
                     <button onclick="closeModelModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
             </div>
-            <div id="modelGrid" class="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <div id="modelModalContent" class="p-6 overflow-y-auto space-y-8">
+                <!-- Sections injected here -->
+            </div>
         </div>
     </div>
 
     <!-- Main Layout -->
     <div class="flex flex-1 overflow-hidden">
-        <!-- Sidebar -->
         <div class="w-72 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0">
             <div class="flex border-b border-gray-700">
                 <button onclick="switchTab('prompts')" id="tab-prompts" class="flex-1 py-3 text-sm font-semibold bg-gray-700 text-blue-400 border-b-2 border-blue-400">Prompts</button>
@@ -154,7 +149,6 @@
             </div>
         </div>
 
-        <!-- Chat Area -->
         <div class="flex-1 flex flex-col bg-gray-900 relative">
             <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth pb-32">
                 <div class="text-center text-gray-600 mt-24">
@@ -255,7 +249,7 @@
             fetchModels();
         }
 
-        // --- Models & Custom Cards ---
+        // --- Models & Categories ---
         function openModelModal() {
             document.getElementById('modelModal').classList.remove('hidden');
             fetchModels();
@@ -263,86 +257,130 @@
         function closeModelModal() { document.getElementById('modelModal').classList.add('hidden'); }
 
         async function fetchModels() {
-            const grid = document.getElementById('modelGrid');
-            grid.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>Fetching models...</p></div>`;
+            const content = document.getElementById('modelModalContent');
+            content.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>Fetching models...</p></div>`;
+            
             try {
-                // Fetch Ollama Models
                 const res = await fetch('/api/models');
                 const data = await res.json();
-                
-                // Fetch Custom Card Data
                 const customRes = await fetch('/api/custom_cards');
                 const customData = await customRes.json();
 
-                grid.innerHTML = '';
                 if(data.error) {
-                    grid.innerHTML = `<div class="col-span-full text-center text-red-500">Ollama is offline. <button onclick="restartServer()" class="underline">Restart Server</button></div>`;
+                    content.innerHTML = `<div class="text-center text-red-500">Ollama is offline. <button onclick="restartServer()" class="underline">Restart Server</button></div>`;
                     return;
                 }
-                
-                data.models.sort((a, b) => {
-                    const favA = favoriteModels.includes(a.name);
-                    const favB = favoriteModels.includes(b.name);
-                    if (favA && !favB) return -1;
-                    if (!favA && favB) return 1;
-                    return a.name.localeCompare(b.name);
+
+                // Categorize Models
+                const categories = {
+                    coding: [],
+                    fast: [],
+                    chat: []
+                };
+
+                data.models.forEach(m => {
+                    const custom = customData[m.name] || {};
+                    const tags = (custom.tags || []).map(t => t.toLowerCase());
+                    
+                    // Priority Logic: Coding > Fast > Chat
+                    if (tags.includes('coding') || tags.includes('dev') || m.name.includes('coder')) {
+                        categories.coding.push(m);
+                    } else if (tags.includes('fast') || tags.includes('speed') || tags.includes('light')) {
+                        categories.fast.push(m);
+                    } else {
+                        categories.chat.push(m);
+                    }
                 });
 
-                for (const m of data.models) {
-                    const sizeGB = (m.size / (1024*1024*1024)).toFixed(1);
-                    const isSelected = selectedModel === m.name ? 'selected' : '';
-                    const isFav = favoriteModels.includes(m.name);
+                // Render Sections
+                content.innerHTML = '';
+                
+                const renderSection = (title, models, icon) => {
+                    if (models.length === 0) return;
                     
-                    // Get Custom Data
-                    const custom = customData[m.name] || {};
-                    const description = custom.description ? `<p class="text-xs text-gray-400 mt-2 italic line-clamp-2">${custom.description}</p>` : '';
-                    const tags = custom.tags ? `<div class="mt-2 flex flex-wrap gap-1">${custom.tags.map(t => `<span class="text-[10px] bg-blue-900/50 text-blue-200 px-1.5 py-0.5 rounded border border-blue-800">${t}</span>`).join('')}</div>` : '';
-                    const iconClass = custom.icon || 'fa-microchip';
-                    const borderColor = custom.color ? custom.color : 'border-gray-600';
+                    // Sort favorites first
+                    models.sort((a, b) => {
+                        const favA = favoriteModels.includes(a.name);
+                        const favB = favoriteModels.includes(b.name);
+                        if (favA && !favB) return -1;
+                        if (!favA && favB) return 1;
+                        return a.name.localeCompare(b.name);
+                    });
 
-                    const card = document.createElement('div');
-                    // Use custom border color if provided, else default
-                    card.className = `model-card bg-gray-700 border ${borderColor} rounded-lg p-4 cursor-pointer relative ${isSelected}`;
-                    card.onclick = () => selectModel(m.name);
-                    
-                    card.innerHTML = `
-                        <div class="absolute top-2 right-2 z-10">
-                            <button onclick="toggleFavorite(event, '${m.name}')" class="text-lg hover:scale-110 transition ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}">
-                                <i class="fa-solid fa-star"></i>
-                            </button>
-                        </div>
-                        <div class="flex justify-between items-start mb-1 pr-6">
-                            <h3 class="font-bold text-white text-lg truncate w-full flex items-center gap-2">
-                                <i class="fa-solid ${iconClass} text-xs opacity-50"></i> ${m.name}
+                    const sectionHtml = `
+                        <div class="mb-6">
+                            <h3 class="text-lg font-bold text-gray-400 mb-3 border-b border-gray-700 pb-1 flex items-center gap-2">
+                                <i class="fa-solid ${icon}"></i> ${title}
                             </h3>
-                        </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">${sizeGB} GB</span>
-                        </div>
-                        ${description}
-                        ${tags}
-                        <div class="text-xs text-gray-500 space-y-1 mt-3 pt-2 border-t border-gray-600" id="details-${m.name.replace(/[:.]/g, '')}">
-                            <div class="flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> <span>Loading specs...</span></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                ${models.map(m => createCardHtml(m, customData[m.name] || {})).join('')}
+                            </div>
                         </div>
                     `;
-                    grid.appendChild(card);
-                    fetchModelDetails(m.name);
-                }
-            } catch(e) {}
+                    content.innerHTML += sectionHtml;
+                };
+
+                renderSection('Coding Models', categories.coding, 'fa-code');
+                renderSection('Fast Models', categories.fast, 'fa-bolt');
+                renderSection('Chat & General Models', categories.chat, 'fa-comments');
+
+                // Fetch details for all
+                data.models.forEach(m => fetchModelDetails(m.name, customData[m.name] || {}));
+
+            } catch(e) { console.error(e); }
         }
 
-        async function fetchModelDetails(name) {
+        function createCardHtml(m, custom) {
+            const sizeGB = (m.size / (1024*1024*1024)).toFixed(1);
+            const isSelected = selectedModel === m.name ? 'selected' : '';
+            const isFav = favoriteModels.includes(m.name);
+            
+            const description = custom.description ? `<p class="text-xs text-gray-400 mt-2 italic line-clamp-2">${custom.description}</p>` : '';
+            const tags = custom.tags ? `<div class="mt-2 flex flex-wrap gap-1">${custom.tags.map(t => `<span class="text-[10px] bg-blue-900/50 text-blue-200 px-1.5 py-0.5 rounded border border-blue-800">${t}</span>`).join('')}</div>` : '';
+            const iconClass = custom.icon || 'fa-microchip';
+            const borderColor = custom.color ? custom.color : 'border-gray-600';
+            const speedVal = custom.speed ? custom.speed : 'N/A';
+
+            return `
+                <div class="model-card bg-gray-700 border ${borderColor} rounded-lg p-4 cursor-pointer relative ${isSelected}" onclick="selectModel('${m.name}')">
+                    <div class="absolute top-2 right-2 z-10">
+                        <button onclick="toggleFavorite(event, '${m.name}')" class="text-lg hover:scale-110 transition ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>
+                    </div>
+                    <div class="flex justify-between items-start mb-1 pr-6">
+                        <h3 class="font-bold text-white text-lg truncate w-full flex items-center gap-2">
+                            <i class="fa-solid ${iconClass} text-xs opacity-50"></i> ${m.name}
+                        </h3>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">${sizeGB} GB</span>
+                    </div>
+                    ${description}
+                    ${tags}
+                    <div class="text-xs text-gray-500 space-y-1 mt-3 pt-2 border-t border-gray-600" id="details-${m.name.replace(/[:.]/g, '')}">
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> <span>Loading specs...</span></div>
+                    </div>
+                    <!-- Hidden data for speed injection later -->
+                    <div id="speed-data-${m.name.replace(/[:.]/g, '')}" class="hidden">${speedVal}</div>
+                </div>
+            `;
+        }
+
+        async function fetchModelDetails(name, custom) {
             try {
                 const res = await fetch('/api/model_details', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name}) });
                 const data = await res.json();
                 const container = document.getElementById(`details-${name.replace(/[:.]/g, '')}`);
+                const speedVal = document.getElementById(`speed-data-${name.replace(/[:.]/g, '')}`).innerText;
+
                 if(data.details) {
                     container.innerHTML = `
                         <div class="grid grid-cols-2 gap-2">
                             <div><span class="text-[10px] text-gray-500 uppercase">Family</span> <span class="text-blue-300 font-mono">${data.details.family || 'N/A'}</span></div>
                             <div><span class="text-[10px] text-gray-500 uppercase">Quant</span> <span class="text-purple-300 font-mono">${data.details.quantization_level || 'N/A'}</span></div>
                             <div><span class="text-[10px] text-gray-500 uppercase">Params</span> <span class="text-green-300 font-mono">${data.details.parameter_size || 'N/A'}</span></div>
-                            <div><span class="text-[10px] text-gray-500 uppercase">Ctx</span> <span class="text-gray-300 font-mono">${data.details.context_length || 'N/A'}</span></div>
+                            <div><span class="text-[10px] text-gray-500 uppercase">Speed</span> <span class="text-gray-300 font-mono">${speedVal}</span></div>
                         </div>`;
                 }
             } catch(e) {}

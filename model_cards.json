@@ -49,11 +49,10 @@
     "color": "border-blue-400"
   },
   "llama3.2:3b": {
-    "description": "Meta's lightweight Llama 3.2, optimized for speed and low latency.  ",
+    "description": "Meta's lightweight Llama 3.2, optimized for speed and low latency.",
     "tags": [ "fast"],
     "icon": "fa-layer-group",
     "color": "border-blue-400"
-    
   },
   "qwen3:0.6b": {
     "description": "Nano-sized Qwen model. Extremely fast, suitable for simple tasks.",
