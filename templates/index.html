@@ -275,7 +275,9 @@
                 const categories = {
                     coding: [],
                     fast: [],
-                    chat: []
+                    chat: [],
+                    uncensored: [],
+
                 };
 
                 data.models.forEach(m => {
@@ -285,6 +287,8 @@
                     // Priority Logic: Coding > Fast > Chat
                     if (tags.includes('coding') || tags.includes('dev') || m.name.includes('coder')) {
                         categories.coding.push(m);
+                    } else if (tags.includes('uncensored')) {
+                        categories.uncensored.push(m);
                     } else if (tags.includes('fast') || tags.includes('speed') || tags.includes('light')) {
                         categories.fast.push(m);
                     } else {
@@ -320,10 +324,10 @@
                     content.innerHTML += sectionHtml;
                 };
 
+                renderSection('Chat & General Models', categories.chat, 'fa-comments');
                 renderSection('Coding Models', categories.coding, 'fa-code');
                 renderSection('Fast Models', categories.fast, 'fa-bolt');
-                renderSection('Chat & General Models', categories.chat, 'fa-comments');
-
+                renderSection('Uncensored', categories.uncensored, 'fa-comments');
                 // Fetch details for all
                 data.models.forEach(m => fetchModelDetails(m.name, customData[m.name] || {}));
 
