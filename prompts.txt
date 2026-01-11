@@ -37,3 +37,6 @@ now give me whole code, dont miss out anyything
 one more modification, can u do it so that i can add whatever template i want for the model card and add additional information to it. these information should come up in the model card. make sure not to remove any other code or anything else. add a separate file to design the model card template. 
 so the working of model card will be like when it sees a model listed in ollama, u look at model card to see if additional info is in it. if it is, the additional info is also shown
 dont break or remove anything, pls
+
+i want multiple classes within the model selector. it should be: chat, coding and fast.
+Then, i want models to be placed in the correct position as my model_cards. also instead of CTX, change it to speed, which i can add as a param manually in my model_cards.
