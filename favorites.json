@@ -1,5 +1,6 @@
 [
   "gpt-oss:latest",
   "deepseek-r1:32b",
-  "qwen3-coder:30b"
+  "qwen3-coder:30b",
+  "devstral-small-2:latest"
 ]
