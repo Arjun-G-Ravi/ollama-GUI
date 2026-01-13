@@ -49,7 +49,7 @@ def check_health():
 def restart_server():
     try:
         if os.name == 'nt':
-            os.system("taskkill /F /IM ollama.exe")
+            os.system("taskkill /F /IM ollama.exe") # windows
         else:
             os.system("pkill ollama")
         time.sleep(1)

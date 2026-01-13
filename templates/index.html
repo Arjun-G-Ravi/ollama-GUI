@@ -62,6 +62,22 @@
             max-height: 400px;
             overflow-y: auto;
         }
+        
+        /* Image Preview Styles */
+        .image-preview-container {
+            display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+        }
+        .image-preview-item {
+            position: relative; width: 60px; height: 60px; border-radius: 0.5rem; overflow: hidden; border: 1px solid #4b5563;
+        }
+        .image-preview-item img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .image-preview-item .remove-btn {
+            position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.7); color: white;
+            width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; cursor: pointer;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
@@ -161,12 +177,25 @@
                     <div id="loadingIndicator" class="hidden absolute -top-8 left-0 text-xs text-blue-400 flex items-center gap-2">
                         <i class="fa-solid fa-circle-notch fa-spin"></i> <span id="loadingText">Generating...</span>
                     </div>
-                    <textarea id="userInput" rows="1" placeholder="Type a message..." 
-                        class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:border-blue-500 resize-none overflow-hidden shadow-inner text-sm"
-                        style="min-height: 50px; max-height: 200px;"></textarea>
-                    <button onclick="handleMainButton()" id="sendBtn" class="absolute right-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition shadow-lg">
-                        <i class="fa-solid fa-paper-plane"></i>
-                    </button>
+                    
+                    <!-- Image Preview Area -->
+                    <div id="imagePreviewArea" class="image-preview-container"></div>
+
+                    <div class="relative">
+                        <!-- Attachment Button -->
+                        <button onclick="document.getElementById('fileInput').click()" class="absolute left-2 top-2.5 text-gray-400 hover:text-white p-1 rounded transition" title="Attach Image">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+                        <input type="file" id="fileInput" accept="image/*" multiple class="hidden" onchange="handleFileSelect(event)">
+
+                        <textarea id="userInput" rows="1" placeholder="Type a message (or paste/drop image)..." 
+                            class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-12 py-3 focus:outline-none focus:border-blue-500 resize-none overflow-hidden shadow-inner text-sm"
+                            style="min-height: 50px; max-height: 200px;"></textarea>
+                        
+                        <button onclick="handleMainButton()" id="sendBtn" class="absolute right-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition shadow-lg">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -182,6 +211,7 @@
         let isOllamaOnline = false;
         let favoriteModels = [];
         let abortController = null;
+        let currentImages = []; // Stores base64 strings
 
         document.addEventListener('DOMContentLoaded', () => {
             checkHealth();
@@ -194,7 +224,72 @@
             const tx = document.getElementById('userInput');
             tx.addEventListener("input", function(){ this.style.height = "auto"; this.style.height = (this.scrollHeight) + "px"; });
             tx.addEventListener("keydown", function(e){ if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleMainButton(); } });
+            
+            // Paste and Drop Listeners
+            tx.addEventListener('paste', handlePaste);
+            tx.addEventListener('drop', handleDrop);
+            tx.addEventListener('dragover', (e) => e.preventDefault());
         });
+
+        // --- Image Handling ---
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            processFiles(files);
+            e.target.value = ''; // Reset
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files.length > 0) processFiles(files);
+        }
+
+        function handlePaste(e) {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            const files = [];
+            for (let item of items) {
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    files.push(item.getAsFile());
+                }
+            }
+            if (files.length > 0) {
+                e.preventDefault();
+                processFiles(files);
+            }
+        }
+
+        function processFiles(files) {
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result;
+                    currentImages.push(base64);
+                    renderImagePreview();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderImagePreview() {
+            const container = document.getElementById('imagePreviewArea');
+            container.innerHTML = '';
+            currentImages.forEach((img, index) => {
+                const div = document.createElement('div');
+                div.className = 'image-preview-item';
+                div.innerHTML = `
+                    <img src="${img}">
+                    <div class="remove-btn" onclick="removeImage(${index})"><i class="fa-solid fa-xmark"></i></div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function removeImage(index) {
+            currentImages.splice(index, 1);
+            renderImagePreview();
+        }
+
+        // --- Core Logic ---
 
         async function checkHealth() {
             try {
@@ -277,14 +372,14 @@
                     fast: [],
                     chat: [],
                     uncensored: [],
-
+                    vision: []
                 };
 
                 data.models.forEach(m => {
                     const custom = customData[m.name] || {};
                     const tags = (custom.tags || []).map(t => t.toLowerCase());
                     
-                    // Priority Logic: Coding > Fast > Chat
+                    // Priority Logic
                     if (tags.includes('coding') || tags.includes('dev') || m.name.includes('coder')) {
                         categories.coding.push(m);
                     } else if (tags.includes('uncensored')) {
@@ -302,7 +397,6 @@
                 const renderSection = (title, models, icon) => {
                     if (models.length === 0) return;
                     
-                    // Sort favorites first
                     models.sort((a, b) => {
                         const favA = favoriteModels.includes(a.name);
                         const favB = favoriteModels.includes(b.name);
@@ -324,11 +418,12 @@
                     content.innerHTML += sectionHtml;
                 };
 
+                renderSection('Vision Models', categories.vision, 'fa-eye');
                 renderSection('Chat & General Models', categories.chat, 'fa-comments');
                 renderSection('Coding Models', categories.coding, 'fa-code');
                 renderSection('Fast Models', categories.fast, 'fa-bolt');
                 renderSection('Uncensored', categories.uncensored, 'fa-comments');
-                // Fetch details for all
+                
                 data.models.forEach(m => fetchModelDetails(m.name, customData[m.name] || {}));
 
             } catch(e) { console.error(e); }
@@ -339,6 +434,13 @@
             const isSelected = selectedModel === m.name ? 'selected' : '';
             const isFav = favoriteModels.includes(m.name);
             
+            // Custom Display Name Logic
+            const displayName = custom.display_name || m.name;
+            
+            // Vision Badge Logic
+            const visionBadge = custom.vision ? 
+                `<span class="text-[10px] bg-purple-900/50 text-purple-200 px-1.5 py-0.5 rounded border border-purple-800 ml-2"><i class="fa-solid fa-eye mr-1"></i>Vision</span>` : '';
+
             const description = custom.description ? `<p class="text-xs text-gray-400 mt-2 italic line-clamp-2">${custom.description}</p>` : '';
             const tags = custom.tags ? `<div class="mt-2 flex flex-wrap gap-1">${custom.tags.map(t => `<span class="text-[10px] bg-blue-900/50 text-blue-200 px-1.5 py-0.5 rounded border border-blue-800">${t}</span>`).join('')}</div>` : '';
             const iconClass = custom.icon || 'fa-microchip';
@@ -346,7 +448,7 @@
             const speedVal = custom.speed ? custom.speed : 'N/A';
 
             return `
-                <div class="model-card bg-gray-700 border ${borderColor} rounded-lg p-4 cursor-pointer relative ${isSelected}" onclick="selectModel('${m.name}')">
+                <div class="model-card bg-gray-700 border ${borderColor} rounded-lg p-4 cursor-pointer relative ${isSelected}" onclick="selectModel('${m.name}', '${displayName}')">
                     <div class="absolute top-2 right-2 z-10">
                         <button onclick="toggleFavorite(event, '${m.name}')" class="text-lg hover:scale-110 transition ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}">
                             <i class="fa-solid fa-star"></i>
@@ -354,18 +456,18 @@
                     </div>
                     <div class="flex justify-between items-start mb-1 pr-6">
                         <h3 class="font-bold text-white text-lg truncate w-full flex items-center gap-2">
-                            <i class="fa-solid ${iconClass} text-xs opacity-50"></i> ${m.name}
+                            <i class="fa-solid ${iconClass} text-xs opacity-50"></i> ${displayName}
                         </h3>
                     </div>
                     <div class="flex items-center gap-2 mb-2">
                         <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">${sizeGB} GB</span>
+                        ${visionBadge}
                     </div>
                     ${description}
                     ${tags}
                     <div class="text-xs text-gray-500 space-y-1 mt-3 pt-2 border-t border-gray-600" id="details-${m.name.replace(/[:.]/g, '')}">
                         <div class="flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> <span>Loading specs...</span></div>
                     </div>
-                    <!-- Hidden data for speed injection later -->
                     <div id="speed-data-${m.name.replace(/[:.]/g, '')}" class="hidden">${speedVal}</div>
                 </div>
             `;
@@ -390,9 +492,9 @@
             } catch(e) {}
         }
 
-        function selectModel(name) {
+        function selectModel(name, displayName) {
             selectedModel = name;
-            document.getElementById('currentModelName').innerText = name;
+            document.getElementById('currentModelName').innerText = displayName || name;
             closeModelModal();
             document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
         }
@@ -423,7 +525,8 @@
             
             const input = document.getElementById('userInput');
             const text = input.value.trim();
-            if (!text) return;
+            
+            if (!text && currentImages.length === 0) return;
 
             input.value = ''; input.style.height = 'auto';
             isGenerating = true;
@@ -432,9 +535,23 @@
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
             document.getElementById('loadingIndicator').classList.remove('hidden');
 
+            // Prepare Message
+            const userMsg = { role: "user", content: text };
+            
+            // Handle Images for API (strip header)
+            if (currentImages.length > 0) {
+                userMsg.images = currentImages.map(img => img.split(',')[1]);
+            }
+
             if (conversationHistory.length === 0) conversationHistory.push({ role: "system", content: currentSystemPrompt });
-            conversationHistory.push({ role: "user", content: text });
-            appendMessage("user", text);
+            conversationHistory.push(userMsg);
+            
+            // Append to UI (pass full base64 for display)
+            appendMessage("user", text, currentImages);
+            
+            // Clear images
+            currentImages = [];
+            renderImagePreview();
 
             const aiMsgDiv = appendMessage("assistant", ""); 
             const thoughtContainer = aiMsgDiv.querySelector('.thought-container');
@@ -518,7 +635,7 @@
             return { thought, answer };
         }
 
-        function appendMessage(role, text) {
+        function appendMessage(role, text, images = []) {
             const div = document.createElement('div');
             const isUser = role === 'user';
             div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
@@ -527,8 +644,15 @@
                 ? "bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-none max-w-[85%] shadow-lg" 
                 : "bg-gray-800 border border-gray-700 text-gray-200 px-5 py-4 rounded-2xl rounded-tl-none max-w-[90%] shadow-lg min-w-[200px]";
             
+            let imgHtml = '';
+            if (images && images.length > 0) {
+                imgHtml = `<div class="flex gap-2 mb-2 flex-wrap">
+                    ${images.map(img => `<img src="${img}" class="max-w-[200px] max-h-[200px] rounded border border-white/20">`).join('')}
+                </div>`;
+            }
+
             if (isUser) {
-                bubble.innerHTML = `<div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">${text}</div>`;
+                bubble.innerHTML = `${imgHtml}<div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">${text}</div>`;
             } else {
                 bubble.innerHTML = `
                     <details class="thought-container thinking-box hidden">
@@ -564,6 +688,8 @@
             conversationHistory = [];
             currentConversationId = null;
             totalTokensUsed = 0;
+            currentImages = [];
+            renderImagePreview();
             document.getElementById('totalTokens').innerText = "0";
             document.getElementById('chatWindow').innerHTML = `<div class="text-center text-gray-600 mt-24"><i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i><p class="text-sm">New chat started.</p></div>`;
         }
@@ -588,7 +714,9 @@
             const chatWin = document.getElementById('chatWindow'); chatWin.innerHTML = '';
             h.messages.forEach(msg => {
                 if(msg.role === 'system') return;
-                const bubble = appendMessage(msg.role, msg.content);
+                // Reconstruct images for display if they exist in history (Note: Ollama history doesn't always return the image data, but if we saved it locally it works)
+                const imgs = msg.images ? msg.images.map(i => `data:image/png;base64,${i}`) : [];
+                const bubble = appendMessage(msg.role, msg.content, imgs);
                 if(msg.role === 'assistant') {
                     const parts = splitThoughtAndAnswer(msg.content);
                     const thoughtContainer = bubble.querySelector('.thought-container');

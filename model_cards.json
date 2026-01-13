@@ -1,63 +1,127 @@
 {
   "deepseek-r1:32b": {
+    "display_name": "DeepSeek R1:32b",
     "description": "Distilled version of DeepSeek R1 for reasoning tasks.",
-    "tags": ["thinking", "complex reasoning"],
+    "tags": ["reasoning", "complex multi-step problems"],
     "icon": "fa-brain",
     "color": "border-blue-400"
   },
   "gemma3:27b": {
+    "display_name": "Gemma 3 27B",
     "description": "Superfast google model, made for chat and general purpose tasks.",
-    "tags": ["Fast", "Chat"],
+    "tags": ["chat"],
     "icon": "fa-gem",
     "color": "border-blue-400",
     "speed": "10" 
   },
   "gpt-oss:latest": {
+    "display_name": "GPT-oss-20b",
     "description": "Close to GPT4 performance",
-    "tags": ["thinking", "Chat"],
+    "tags": ["reasoning", "chat"],
     "icon": "fa-robot",
     "color": "border-blue-400"
   },
+  "dolphin-llama3:8b": {
+    "display_name": "Dolphin Llama 3",
+    "description": "Uncensored, roleplay-capable version of Llama 3 by Cognitive Computations.",
+    "tags": ["uncensored", "chat"],
+    "icon": "fa-water",
+    "color": "border-cyan-400"
+  },
+  "hf.co/DavidAU/Llama-3.2-8X3B-MOE-Dark-Champion-Instruct-uncensored-abliterated-18.4B-GGUF:Q8_0": {
+    "display_name": "Llama 3.2 (Uncensored)",
+    "description": "Tiny but mighty. Uncensored version of Meta's 1B model.",
+    "tags": ["uncensored"],
+    "icon": "fa-shield-cat",
+    "color": "border-red-400"
+  },
+  "hf.co/DavidAU/OpenAi-GPT-oss-20b-HERETIC-uncensored-NEO-Imatrix-gguf:Q8_0": {
+    "display_name": "OpenAI GPT-oss (Uncensored)",
+    "description": "Classic GPT architecture without safety filters.",
+    "tags": ["uncensored"],
+    "icon": "fa-history",
+    "color": "border-gray-500"
+  },
+  "hf.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF:Q4_K_M": {
+    "display_name": "Nemotron 3 22B",
+    "description": "NVIDIA's powerful enterprise-grade model.",
+    "tags": ["nvidia", "enterprise"],
+    "icon": "fa-server",
+    "color": "border-green-400"
+  },
+  "huihui_ai/qwen2.5-abliterate:32b": {
+    "display_name": "Qwen 2.5 Abliterated",
+    "description": "Qwen 2.5 32B with refusal mechanisms removed (Abliterated).",
+    "tags": ["uncensored", "smart"],
+    "icon": "fa-unlock",
+    "color": "border-purple-400"
+  },
   "qwen3-coder:30b": {
+    "display_name": "Qwen 3 Coder",
     "description": "State-of-the-art coding model for its size.",
     "tags": ["coding"],
     "icon": "fa-code",
     "color": "border-blue-400"
   },
   "devstral-small-2:latest": {
+    "display_name": "Devstral Small",
     "description": "A highly efficient Mistral-based model fine-tuned for development workflows.",
     "tags": ["fast", "coding"],
     "icon": "fa-wind",
-    "color": "border-blue-400"
+    "color": "border-blue-400",
+    "vision": true
+
+  
   },
   "gemma3:270m": {
+    "display_name": "Gemma 3 (Nano)",
     "description": "Ultra-lightweight Gemma variant.",
-    "tags": ["fast"],
+    "tags": ["fast", "mobile"],
     "icon": "fa-mobile-screen",
     "color": "border-blue-400"
   },
   "gemma3n:e4b": {
+    "display_name": "Gemma 3n Edge",
     "description": "Experimental edge-optimized version of the Gemma architecture.",
     "tags": ["experimental", "fast"],
     "icon": "fa-flask",
     "color": "border-blue-400"
   },
   "llama2-uncensored:7b": {
+    "display_name": "Llama 2 Uncensored",
     "description": "Llama 2 7B with refusal mechanisms removed for unrestricted conversation.",
-    "tags": ["uncensored", "talks too little", "chat"],
+    "tags": ["uncensored", "chat"],
     "icon": "fa-unlock",
-    "color": "border-blue-400"
+    "color": "border-red-400"
   },
   "llama3.2:3b": {
+    "display_name": "Llama 3.2 3B",
     "description": "Meta's lightweight Llama 3.2, optimized for speed and low latency.",
     "tags": [ "fast"],
     "icon": "fa-layer-group",
     "color": "border-blue-400"
   },
   "qwen3:0.6b": {
+    "display_name": "Qwen 3 (Nano)",
     "description": "Nano-sized Qwen model. Extremely fast, suitable for simple tasks.",
     "tags": ["light", "Speed"],
     "icon": "fa-feather",
     "color": "border-blue-400"
+  },
+  "llava:latest": {
+    "display_name": "LLaVA Vision",
+    "description": "Large Language-and-Vision Assistant.",
+    "tags": ["vision", "multimodal"],
+    "icon": "fa-eye",
+    "color": "border-purple-400",
+    "vision": true
+  },
+  "llama3.2-vision:11b": {
+    "display_name": "Llama 3.2 Vision",
+    "description": "Meta's vision capable model.",
+    "tags": ["vision", "meta"],
+    "icon": "fa-eye",
+    "color": "border-purple-400",
+    "vision": true
   }
 }
