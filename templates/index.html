@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local LLM Studio</title>
+    <title>Ollama Studio</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🦙</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
@@ -32,7 +33,7 @@
         .copy-btn:hover { background: #4b5563; color: white; }
 
         .model-card { transition: all 0.2s; }
-        .model-card:hover { transform: translateY(-2px); border-color: #60a5fa; }
+        .model-card:hover { transform: translateY(-2px); border-color: #10b981; }
         .model-card.selected { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
 
         details.thinking-box {
@@ -85,7 +86,7 @@
     <!-- Top Bar -->
     <div class="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 shrink-0 shadow-md z-10">
         <div class="flex items-center gap-6">
-            <h1 class="text-xl font-bold text-blue-400 tracking-tight"><i class="fa-solid fa-layer-group mr-2"></i>Ollama Studio</h1>
+            <h1 class="text-xl font-bold text-blue-400 tracking-tight cursor-pointer hover:text-blue-300 transition" onclick="newChat()" title="Start New Chat"><i class="fa-solid fa-layer-group mr-2"></i>Ollama Studio</h1>
             
             <div id="connectionStatus" class="flex items-center gap-2 text-xs font-mono bg-gray-900 px-3 py-1 rounded border border-gray-600">
                 <div class="w-2 h-2 rounded-full bg-red-500" id="statusDot"></div>
@@ -167,10 +168,6 @@
 
         <div class="flex-1 flex flex-col bg-gray-900 relative">
             <div id="chatWindow" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth pb-32">
-                <div class="text-center text-gray-600 mt-24">
-                    <i class="fa-solid fa-microchip text-5xl mb-4 opacity-20"></i>
-                    <p class="text-sm">Select a model to begin.</p>
-                </div>
             </div>
             <div class="p-4 bg-gray-800 border-t border-gray-700 absolute bottom-0 w-full">
                 <div class="max-w-4xl mx-auto relative">
@@ -212,6 +209,8 @@
         let favoriteModels = [];
         let abortController = null;
         let currentImages = []; // Stores base64 strings
+        let currentThinkingBox = null; // Reference to current thinking message box
+        let isInThinkingMode = false; // Track if we're currently processing thinking tags
 
         document.addEventListener('DOMContentLoaded', () => {
             checkHealth();
@@ -440,11 +439,25 @@
             // Vision Badge Logic
             const visionBadge = custom.vision ? 
                 `<span class="text-[10px] bg-purple-900/50 text-purple-200 px-1.5 py-0.5 rounded border border-purple-800 ml-2"><i class="fa-solid fa-eye mr-1"></i>Vision</span>` : '';
+            
+            // Reasoning Badge Logic
+            const reasoningBadge = custom.reasoning ? 
+                `<span class="text-[10px] bg-orange-900/50 text-orange-200 px-1.5 py-0.5 rounded border border-orange-800 ml-2"><i class="fa-solid fa-brain mr-1"></i>Reasoning</span>` : '';
 
             const description = custom.description ? `<p class="text-xs text-gray-400 mt-2 italic line-clamp-2">${custom.description}</p>` : '';
             const tags = custom.tags ? `<div class="mt-2 flex flex-wrap gap-1">${custom.tags.map(t => `<span class="text-[10px] bg-blue-900/50 text-blue-200 px-1.5 py-0.5 rounded border border-blue-800">${t}</span>`).join('')}</div>` : '';
-            const iconClass = custom.icon || 'fa-microchip';
-            const borderColor = custom.color ? custom.color : 'border-gray-600';
+            
+            // Icon logic based on model type
+            let iconClass = 'fa-microchip';
+            if (custom.tags) {
+                if (custom.tags.includes('coding')) iconClass = 'fa-code';
+                else if (custom.tags.includes('uncensored')) iconClass = 'fa-unlock';
+                else if (custom.tags.includes('fast')) iconClass = 'fa-bolt';
+                else if (custom.tags.includes('chat') || custom.tags.includes('reasoning')) iconClass = 'fa-brain';
+            }
+            if (custom.icon) iconClass = custom.icon; // Allow override
+            
+            const borderColor = 'border-blue-400'; // Always blue
             const speedVal = custom.speed ? custom.speed : 'N/A';
 
             return `
@@ -462,6 +475,7 @@
                     <div class="flex items-center gap-2 mb-2">
                         <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">${sizeGB} GB</span>
                         ${visionBadge}
+                        ${reasoningBadge}
                     </div>
                     ${description}
                     ${tags}
@@ -497,6 +511,32 @@
             document.getElementById('currentModelName').innerText = displayName || name;
             closeModelModal();
             document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+            
+            // Preload the model into VRAM
+            preloadModel(name);
+        }
+        
+        async function preloadModel(modelName) {
+            try {
+                // Show loading message
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                const loadingText = document.getElementById('loadingText');
+                loadingIndicator.classList.remove('hidden');
+                loadingText.innerText = 'Preloading model...';
+                
+                // Send a dummy request to load the model into memory
+                await fetch('/api/preload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: modelName })
+                });
+                
+                // Hide loading message
+                loadingIndicator.classList.add('hidden');
+            } catch(e) {
+                console.log('Preload failed:', e);
+                document.getElementById('loadingIndicator').classList.add('hidden');
+            }
         }
 
         // --- Chat & Thinking Logic ---
@@ -534,6 +574,7 @@
 
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
             document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('loadingText').innerText = 'Loading model...';
 
             // Prepare Message
             const userMsg = { role: "user", content: text };
@@ -560,6 +601,10 @@
             const metaDiv = aiMsgDiv.querySelector('.msg-meta');
             
             let fullResponse = "";
+            let inThinkTag = false;
+            let currentThought = "";
+            let currentAnswer = "";
+            let hasStartedGenerating = false;
 
             try {
                 const response = await fetch('/api/chat', {
@@ -585,18 +630,48 @@
                             if(json.error) throw new Error(json.error);
 
                             if (json.message && json.message.content) {
-                                document.getElementById('loadingText').innerText = "Generating...";
                                 fullResponse += json.message.content;
                                 
-                                const parts = splitThoughtAndAnswer(fullResponse);
+                                // Real-time thinking detection and display
+                                let workingText = fullResponse;
+                                const thinkStartIdx = workingText.indexOf('<think>');
+                                const thinkEndIdx = workingText.indexOf('</think>');
                                 
-                                if (parts.thought) {
-                                    thoughtContainer.classList.remove('hidden');
-                                    thoughtContent.innerHTML = marked.parse(parts.thought);
+                                if (thinkStartIdx !== -1) {
+                                    // We have a thinking section
+                                    thoughtContainer.style.display = 'block';
+                                    document.getElementById('loadingText').innerText = 'Thinking...';
+                                    
+                                    if (thinkEndIdx !== -1) {
+                                        // Complete thinking block
+                                        currentThought = workingText.substring(thinkStartIdx + 7, thinkEndIdx).trim();
+                                        currentAnswer = workingText.substring(0, thinkStartIdx) + workingText.substring(thinkEndIdx + 8);
+                                        inThinkTag = false;
+                                        // Once thinking is done, switch to generating
+                                        if (currentAnswer.trim()) {
+                                            document.getElementById('loadingText').innerText = 'Generating...';
+                                            hasStartedGenerating = true;
+                                        }
+                                    } else {
+                                        // Still in thinking mode
+                                        currentThought = workingText.substring(thinkStartIdx + 7).trim();
+                                        currentAnswer = workingText.substring(0, thinkStartIdx);
+                                        inThinkTag = true;
+                                    }
+                                    
+                                    // Update thinking content with smaller italic style in real-time
+                                    thoughtContent.textContent = currentThought;
                                     highlightCode(thoughtContent);
+                                } else {
+                                    // No thinking tags - just generating normally
+                                    if (!hasStartedGenerating) {
+                                        document.getElementById('loadingText').innerText = 'Generating...';
+                                        hasStartedGenerating = true;
+                                    }
+                                    currentAnswer = workingText;
                                 }
 
-                                answerContent.innerHTML = marked.parse(parts.answer);
+                                answerContent.innerHTML = marked.parse(currentAnswer.trim() || '...');
                                 highlightCode(answerContent);
                                 scrollToBottom();
                             }
@@ -655,9 +730,9 @@
                 bubble.innerHTML = `${imgHtml}<div class="msg-content prose prose-invert max-w-none text-sm leading-relaxed">${text}</div>`;
             } else {
                 bubble.innerHTML = `
-                    <details class="thought-container thinking-box hidden">
-                        <summary>Thought Process</summary>
-                        <div class="thought-content prose prose-invert max-w-none text-xs"></div>
+                    <details class="thought-container thinking-box" style="display: none;" open>
+                        <summary>💭 Thinking Process</summary>
+                        <div class="thought-content" style="padding: 0.75rem; font-size: 0.85rem; font-style: italic; color: #d1d5db; background: rgba(0,0,0,0.3); border-radius: 0.25rem; margin-top: 0.5rem; white-space: pre-wrap; font-family: monospace;"></div>
                     </details>
                     <div class="answer-content prose prose-invert max-w-none text-sm leading-relaxed"><span class="animate-pulse">...</span></div>
                     <div class="msg-meta text-[10px] text-gray-500 mt-2 text-right font-mono h-4"></div>
@@ -691,7 +766,7 @@
             currentImages = [];
             renderImagePreview();
             document.getElementById('totalTokens').innerText = "0";
-            document.getElementById('chatWindow').innerHTML = `<div class="text-center text-gray-600 mt-24"><i class="fa-solid fa-rotate-right text-5xl mb-4 opacity-20"></i><p class="text-sm">New chat started.</p></div>`;
+            document.getElementById('chatWindow').innerHTML = '';
         }
         
         // --- History & Prompts ---

@@ -2,108 +2,139 @@
   "deepseek-r1:32b": {
     "display_name": "DeepSeek R1:32b",
     "description": "Distilled version of DeepSeek R1 for reasoning tasks.",
-    "tags": ["reasoning", "complex multi-step problems"],
-    "icon": "fa-brain",
-    "color": "border-blue-400"
+    "tags": [
+      "reasoning",
+      "super-smart"
+    ],
+    "reasoning": true,
+    "speed": "36 tok/s"
   },
   "gemma3:27b": {
     "display_name": "Gemma 3 27B",
     "description": "Google model, made for chat and general purpose tasks.",
-    "tags": ["chat"],
-    "icon": "fa-gem",
-    "color": "border-blue-400",
-    "speed": "10 tok/s" 
+    "tags": [
+      "chat"
+    ],
+    "speed": "10 tok/s"
   },
   "gpt-oss:latest": {
     "display_name": "GPT-oss-20b",
     "description": "Close to GPT4 performance; too many tables; high hallucination",
-    "tags": ["reasoning", "chat"],
-    "icon": "fa-robot",
-    "color": "border-blue-400"
+    "tags": [
+      "reasoning",
+      "chat",
+      "super-smart"
+    ],
+    "reasoning": true,
+    "speed": "150 tok/s"
   },
   "dolphin-llama3:8b": {
     "display_name": "Dolphin Llama 3",
-    "description": "Uncensored, roleplay-capable version of Llama 3 by Cognitive Computations.",
-    "tags": ["uncensored", "chat"],
-    "icon": "fa-water",
-    "color": "border-cyan-400"
+    "description": "Fast, smart and censorship is low",
+    "tags": [
+      "uncensored",
+      "chat"
+    ],
+    "speed": "- tok/s"
   },
   "hf.co/DavidAU/Llama-3.2-8X3B-MOE-Dark-Champion-Instruct-uncensored-abliterated-18.4B-GGUF:Q8_0": {
     "display_name": "Llama 3.2 (Uncensored)",
-    "description": "Tiny but mighty. Uncensored version of Meta's 1B model.",
-    "tags": ["uncensored"],
-    "icon": "fa-shield-cat",
-    "color": "border-red-400"
+    "description": "Big smart model, but censorship exists and need a push to talk about certain topics.",
+    "tags": [
+      "uncensored",
+      "super-smart"
+    ],
+    "speed": "- tok/s"
   },
   "hf.co/DavidAU/OpenAi-GPT-oss-20b-HERETIC-uncensored-NEO-Imatrix-gguf:Q8_0": {
     "display_name": "OpenAI GPT-oss (Uncensored)",
-    "description": "Classic GPT architecture without safety filters.",
-    "tags": ["uncensored"],
-    "icon": "fa-history",
-    "color": "border-gray-500"
+    "description": "Doesnt answer at all.",
+    "tags": [
+      "uncensored"
+    ],
+    "speed": "- tok/s"
   },
   "hf.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF:Q4_K_M": {
     "display_name": "Nemotron 3 22B",
     "description": "NVIDIA's powerful enterprise-grade model.",
-    "tags": ["nvidia", "enterprise"],
-    "icon": "fa-server",
-    "color": "border-green-400"
+    "tags": [
+      "chat",
+      "super-smart"
+    ],
+    "speed": "- tok/s"
   },
   "huihui_ai/qwen2.5-abliterate:32b": {
-    "display_name": "Qwen 2.5 Abliterated",
-    "description": "Qwen 2.5 32B with refusal mechanisms removed (Abliterated).",
-    "tags": ["uncensored", "smart"],
-    "icon": "fa-unlock",
-    "color": "border-purple-400"
+    "display_name": "Qwen 2.5 Uncensored",
+    "description": "Smart; Very uncensored.",
+    "tags": [
+      "uncensored",
+      "super-smart"
+    ],
+    "speed": "- tok/s"
   },
   "qwen3-coder:30b": {
     "display_name": "Qwen 3 Coder",
     "description": "Best local coding model at this size.",
-    "tags": ["coding"],
-    "icon": "fa-code",
-    "color": "border-blue-400"
+    "tags": [
+      "coding",
+      "super-smart"
+    ],
+    "speed": "- tok/s"
   },
   "devstral-small-2:latest": {
     "display_name": "Devstral Small",
     "description": "A highly efficient coding model; really good",
-    "tags": ["fast", "coding"],
-    "icon": "fa-wind",
-    "color": "border-blue-400",
-    "vision": true  
+    "tags": [
+      "fast",
+      "coding"
+    ],
+    "vision": true,
+    "speed": "- tok/s"
   },
   "gemma3:270m": {
     "display_name": "Gemma 3 (Nano)",
     "description": "Ultra-lightweight Gemma variant.",
-    "tags": ["fast", "mobile"],
-    "icon": "fa-mobile-screen",
-    "color": "border-blue-400"
+    "tags": [
+      "fast",
+      "chat"
+    ],
+    "speed": "490 tok/s"
   },
   "gemma3n:e4b": {
-    "display_name": "Gemma 3n Edge",
-    "description": "Experimental edge-optimized version of the Gemma architecture.",
-    "tags": ["experimental", "fast"],
-    "icon": "fa-flask",
-    "color": "border-blue-400"
+    "display_name": "Gemma 3n - experimental",
+    "description": "Can generate a lot of text quickly if needed",
+    "tags": [
+      "experimental",
+      "fast"
+    ],
+    "speed": "115 tok/s"
   },
   "llama2-uncensored:7b": {
     "display_name": "Llama 2 Uncensored",
     "description": "Talks very little; censorship is low; Not very smart.",
-    "tags": ["uncensored", "chat"],
-    "icon": "fa-unlock",
-    "color": "border-red-400"
+    "tags": [
+      "uncensored",
+      "chat"
+    ],
+    "speed": "- tok/s"
   },
   "llama3.2:3b": {
     "display_name": "Llama 3.2 3B",
     "description": "Very fast; decently smart.",
-    "tags": [ "fast"],
-    "icon": "fa-layer-group",
-    "color": "border-blue-400"
+    "tags": [
+      "fast",
+      "chat"
+    ],
+    "speed": "260 tok/s"
   },
   "qwen3:0.6b": {
     "display_name": "Qwen 3 (Nano)",
     "description": "Insanely fast",
-    "tags": ["fast", "Speed"],
-    "icon": "fa-feather",
-    "color": "border-blue-400"
+    "tags": [
+      "fast",
+      "reasoning"
+    ],
+    "speed": "420 tok/s",
+    "reasoning": true
   }
 }

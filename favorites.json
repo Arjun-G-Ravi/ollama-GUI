@@ -2,5 +2,5 @@
   "gpt-oss:latest",
   "deepseek-r1:32b",
   "qwen3-coder:30b",
-  "devstral-small-2:latest"
+  "huihui_ai/qwen2.5-abliterate:32b"
 ]

@@ -167,6 +167,25 @@ def chat():
             yield json.dumps({"error": str(e)}).encode() + b'\n'
     return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
+@app.route('/api/preload', methods=['POST'])
+def preload_model():
+    """Preload a model into VRAM by sending a minimal chat request"""
+    try:
+        model_name = request.json.get('model')
+        # Send a minimal request to load the model
+        requests.post(
+            f"{OLLAMA_API_BASE}/chat",
+            json={
+                "model": model_name,
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": False
+            },
+            timeout=30
+        )
+        return jsonify({"status": "preloaded"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     load_json(PROMPTS_FILE, {"Default": "You are a helpful assistant."})
     load_json(HISTORY_FILE, [])
