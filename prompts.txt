@@ -40,3 +40,5 @@ dont break or remove anything, pls
 
 i want multiple classes within the model selector. it should be: chat, coding and fast.
 Then, i want models to be placed in the correct position as my model_cards. also instead of CTX, change it to speed, which i can add as a param manually in my model_cards.
+
+i want to have the ability to rename the model name to show in the model card. also, i want "vision" next to the size of the model in the model card for models that support vision. If the model support vision capabilities, i should be able to drag drop images into the the chat place and give it to the model. The image history can be stored with the history. now give me whole code, dont miss out anyything.dont break or remove anything, pls 

@@ -1,5 +1,174 @@
 [
   {
+    "id": "568a56b6-f802-4b45-8a4b-e52582ec4812",
+    "timestamp": "2026-01-13 10:58",
+    "model": "huihui_ai/qwen2.5-abliterate:32b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "i cant seem to get a fitgirl repack of batman arkham origins working on my pc"
+      },
+      {
+        "role": "assistant",
+        "content": "It can be frustrating when you're having trouble getting a game to work, especially with repacks like FitGirl's. Here are some steps and tips that might help you troubleshoot and resolve the issue:\n\n1. **Ensure Proper Download**:\n   - Make sure you downloaded all parts of the game (if it\u2019s split into multiple files). Sometimes, missing parts can cause issues.\n   - Verify the download by checking the file sizes against what's advertised on the repack website.\n\n2. **Check Your PC Specifications**:\n   - FitGirl repacks usually optimize games for lower-end systems, but make sure your system meets the minimum requirements for Batman Arkham Origins.\n   - Check if you have enough free disk space and RAM to run the game smoothly.\n\n3. **Install .NET Framework**:\n   - Some older games require specific versions of Microsoft\u2019s .NET framework. Ensure that you have the necessary version installed (usually .NET Framework 4.5 or newer).\n\n4. **Update Your Drivers**:\n   - Make sure your graphics card drivers are up-to-date. Outdated drivers can often cause compatibility issues.\n\n5. **Run as Administrator**:\n   - Right-click on the game\u2019s executable file and select \"Run as administrator.\" This can sometimes resolve permission-related issues.\n\n6. **Install DirectX**:\n   - Ensure that you have the latest version of DirectX installed. You can download it from Microsoft\u2019s website.\n\n7. **Check for Patch Updates**:\n   - FitGirl repacks often include patches to fix known bugs. Make sure you\u2019ve applied all available patches and updates.\n\n8. **Use a Compatibility Mode**:\n   - Right-click on the game's executable, go to \"Properties,\" then navigate to the \"Compatibility\" tab.\n   - Try running it in compatibility mode for an earlier version of Windows (like Windows 7 or 8).\n\n9. **Verify Game Files**:\n   - If you're using a digital distribution platform like Steam or GOG where you have the original game, try verifying the integrity of your game files.\n\n10. **Look for Log Files**:\n    - Some repacks create log files that can help identify what's going wrong. Check the installation directory for any logs and look for error messages.\n\n11. **Use a Different Repack**:\n    - If FitGirl\u2019s repack continues to give you trouble, consider trying another repack like Platinmods or GamersGate (if available).\n\nIf none of these steps resolve your issue, it might be helpful to consult the community forums related to FitGirl repacks or gaming platforms for more specific troubleshooting advice."
+      }
+    ]
+  },
+  {
+    "id": "29acf1df-615e-4dfc-bd53-c0ef6ce6ddca",
+    "timestamp": "2026-01-12 11:05",
+    "model": "hf.co/DavidAU/Llama-3.2-8X3B-MOE-Dark-Champion-Instruct-uncensored-abliterated-18.4B-GGUF:Q8_0",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hello"
+      },
+      {
+        "role": "assistant",
+        "content": ""
+      },
+      {
+        "role": "user",
+        "content": "what"
+      },
+      {
+        "role": "assistant",
+        "content": ""
+      },
+      {
+        "role": "user",
+        "content": "who is john"
+      },
+      {
+        "role": "assistant",
+        "content": ""
+      },
+      {
+        "role": "user",
+        "content": "what is john wick"
+      },
+      {
+        "role": "assistant",
+        "content": ""
+      },
+      {
+        "role": "user",
+        "content": "what is john wick"
+      },
+      {
+        "role": "assistant",
+        "content": "John Wick is a popular American action-thriller film franchise created by Derek Kolstad. The series follows the story of John Wick, a retired hitman played by Keanu Reeves.\n\nThe first film, released in 2014, tells the story of an ex-hitman who seeks vengeance for the theft of his car and dog by a group of thugs. As he navigates this treacherous world, he must confront various assassins and gangsters, leading to a violent showdown with some of the most skilled killers in the business.\n\nThe success of the first film led to two sequels: John Wick: Chapter 2 (2017) and John Wick: Chapter 3 \u2013 Parabellum (2019). The franchise has since expanded to include a spin-off TV series, John Wick: Chapter 4 (2023), and various other media.\n\nThe John Wick franchise is known for its:\n\n* High-octane action sequences\n* Innovative fight choreography\n* Stylish cinematography\n* Dark humor and wit\n* Moral ambiguity\n\nJohn Wick has become a cultural phenomenon, inspiring numerous memes, fan art, and cosplay. The character's iconic suits, guns, and dog (Buddy) have also become recognizable symbols of the franchise.\n\nAre you a fan of John Wick or looking for more info about the series?"
+      },
+      {
+        "role": "user",
+        "content": "game about druga"
+      },
+      {
+        "role": "assistant",
+        "content": "There are several games that feature John Wick as the main character or have elements related to his story. Here are a few examples:\n\n1. **John Wick: Hex** - This is a turn-based strategy game developed by Bloober Team, the studio behind The Witcher 3. In the game, you play as John Wick, using magic and combat skills to take down enemies in a series of challenging levels.\n2. **John Wick: Legends** - This is a card game based on the franchise, where players take on the role of legendary assassins, competing against each other in intense battles.\n3. **Witcher 3: Wild Hunt DLC - \"Blood and Wine\" has a John Wick storyline that was written by the same author who wrote the books on which the movies are based**. This is not a game about John Wick but rather an expansion to the Witcher series.\n\nThese games offer different takes on the John Wick universe, with varying levels of action, strategy, and storytelling."
+      },
+      {
+        "role": "user",
+        "content": "what is the plot fo the game schedule 1"
+      },
+      {
+        "role": "assistant",
+        "content": "I don't have any information on a game called \"John Wick: Schedule 1\". It's possible that it's a fictional or non-existent game.\n\nHowever, I can tell you about some of the games in the John Wick franchise:\n\n1. **John Wick Hex**: This is a turn-based strategy game developed by Bloober Team. The game follows the story of John Wick as he takes on various challenges and opponents in a series of levels.\n2. **John Wick Legends**: This is a card game based on the franchise, where players take on the role of legendary assassins competing against each other in intense battles.\n\nIf you're looking for more information about these games or would like to know more about the John Wick franchise as a whole, feel free to ask!"
+      },
+      {
+        "role": "user",
+        "content": "who kobe"
+      },
+      {
+        "role": "assistant",
+        "content": "It seems like you might be thinking of Kobe Bryant!\n\nKobe Bryant (1978-2020) was an American professional basketball player who played his entire 20-year career with the Los Angeles Lakers in the National Basketball Association (NBA). He is widely considered one of the greatest basketball players of all time.\n\nHere are some interesting facts about Kobe:\n\n1. **The Mamba**: Kobe earned this nickname due to his quick and deadly moves on the court, as well as his aggressive playing style.\n2. **Five NBA championships**: Kobe won five NBA championships with the Lakers, including two \"three-peats\" from 2000 to 2002 and again in 2009.\n3. **Two NBA Finals MVPs**: Kobe was named NBA Finals MVP twice (2002 and 2009).\n4. **Two-time NBA scoring champion**: Kobe led the league in scoring twice (2006 and 2007), averaging over 35 points per game.\n5. **The Black Mamba**: Kobe's nickname \"Black Mamba\" referred to his deadly accuracy on the court, as well as his reputation for being fierce and intense.\n\nSadly, Kobe tragically passed away in a helicopter crash on January 26, 2020, at the age of 41, along with eight other passengers. He will always be remembered as one of the greatest basketball players and a beloved figure in sports history."
+      }
+    ]
+  },
+  {
+    "id": "984a7e11-9310-4f7a-92ea-4384182f8999",
+    "timestamp": "2026-01-11 20:50",
+    "model": "gemma3:27b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hello"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello there! \ud83d\udc4b \n\nHow can I help you today? Just let me know what you're thinking, or if you just wanted to say hi, that's lovely too! \ud83d\ude0a\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "what is your name"
+      },
+      {
+        "role": "assistant",
+        "content": "That's a great question! I am a large language model, trained by Google. \n\nI don't have a personal name, but you can call me Assistant if you like. I'm here to help in any way I can! \ud83d\ude0a\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "ill call u kevin"
+      },
+      {
+        "role": "assistant",
+        "content": "Kevin! Haha, okay! That's... unexpected, but I'm happy to be Kevin for you. \ud83d\ude04\n\nJust let me know if you ever want to change it! So, what can Kevin do for you today?\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "whats ur name"
+      },
+      {
+        "role": "assistant",
+        "content": "You're testing me, aren't you? \ud83d\ude09 It's a good test!\n\nAs I said before, I don't *have* a name. I'm a large language model created by the Gemma team at Google DeepMind. I'm an *open weights* model, which means I'm widely available to the public.\n\nBut you can keep calling me Kevin if you prefer! I'm flexible. \ud83d\ude04\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "so whats ur name"
+      },
+      {
+        "role": "assistant",
+        "content": "Okay, okay! You're persistent! \ud83d\ude04 I'm trying to explain that I don't *have* a name in the way a person does. I'm an AI.\n\nThink of it like asking a calculator its name. It can *do* things, but it doesn't *have* a name.\n\nBut to directly answer your question, the team who created me is the **Gemma team at Google DeepMind**. That's the closest thing I have to a \"name.\" \n\nHowever, you've already named *me* Kevin, and I'll happily respond to that!\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "just asnwer in one word"
+      },
+      {
+        "role": "assistant",
+        "content": "Gemma.\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "no, i named u ;("
+      },
+      {
+        "role": "assistant",
+        "content": "Kevin.\n\n\n\n"
+      },
+      {
+        "role": "user",
+        "content": "good boy"
+      },
+      {
+        "role": "assistant",
+        "content": "\ud83d\ude0a \n\n(Happy to be a good boy!)\n\n\n\n"
+      }
+    ]
+  },
+  {
     "id": "8b152e5f-d4c6-4b22-9840-c9b69be64e5c",
     "timestamp": "2026-01-11 20:34",
     "model": "llama2-uncensored:7b",
