@@ -15,6 +15,7 @@ from io import BytesIO
 app = Flask(__name__)
 
 # --- Configuration ---
+DEFAULT_MODEL = "devstral-small-2:latest"  # Model to preload on startup
 OLLAMA_API_BASE = "http://localhost:11434/api"
 PROMPTS_FILE = "prompts.json"
 HISTORY_FILE = "history.json"
@@ -95,6 +96,10 @@ def get_stats():
         "cpu": cpu_usage, "ram_text": ram_str,
         "gpu": gpu_usage, "vram_text": vram_str
     })
+
+@app.route('/api/default_model')
+def get_default_model():
+    return jsonify({"model": DEFAULT_MODEL})
 
 @app.route('/api/models')
 def get_models():
@@ -487,4 +492,24 @@ if __name__ == '__main__':
     load_json(HISTORY_FILE, [])
     load_json(FAVORITES_FILE, [])
     load_json(MODEL_CARDS_FILE, {})
+    
+    # Preload default model
+    def preload_default_model():
+        # time.sleep(2)  # Wait for Flask to start
+        try:
+            print(f"Preloading model: {DEFAULT_MODEL}")
+            requests.post(
+                f"{OLLAMA_API_BASE}/chat",
+                json={
+                    "model": DEFAULT_MODEL,
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": False
+                },
+                timeout=30
+            )
+            print(f"Model {DEFAULT_MODEL} preloaded successfully")
+        except Exception as e:
+            print(f"Failed to preload model: {e}")
+    
+    threading.Thread(target=preload_default_model, daemon=True).start()
     app.run(port=5000, debug=True)

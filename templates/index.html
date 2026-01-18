@@ -365,6 +365,7 @@
             fetchHistory();
             fetchFavorites();
             fetchCustomCards(); // Fetch custom model cards on load
+            loadDefaultModel(); // Auto-select default model
             setInterval(updateStats, 500);
             setInterval(checkHealth, 5000);
             
@@ -507,6 +508,19 @@
             fetchModels();
         }
         function closeModelModal() { document.getElementById('modelModal').classList.add('hidden'); }
+
+        async function loadDefaultModel() {
+            try {
+                const res = await fetch('/api/default_model');
+                const data = await res.json();
+                if (data.model) {
+                    // Auto-select the default model
+                    selectModel(data.model, data.model, 'text', 'ollama');
+                }
+            } catch (e) {
+                console.error('Failed to load default model:', e);
+            }
+        }
 
         async function fetchModels() {
             const content = document.getElementById('modelModalContent');

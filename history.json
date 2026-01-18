@@ -1,5 +1,97 @@
 [
   {
+    "id": "1cf20517-6d15-4846-b088-12b294ec60f3",
+    "timestamp": "2026-01-18 21:17",
+    "model": "qwen3:0.6b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "how old are u"
+      },
+      {
+        "role": "assistant",
+        "content": "I don't have a physical age, but I'm here to help with all your questions and tasks! How can I assist you today? \ud83d\ude0a"
+      }
+    ]
+  },
+  {
+    "id": "1e4d73ff-6696-4653-8256-47801769d669",
+    "timestamp": "2026-01-18 21:17",
+    "model": "qwen3:0.6b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "what are u"
+      },
+      {
+        "role": "assistant",
+        "content": "I'm an AI assistant here to help you with information, answer questions, and provide support. Think of me as a virtual tool designed to assist with a wide range of topics\u2014whether it's explaining concepts, offering advice, or just having a conversation. How can I assist you today? \ud83d\ude0a"
+      },
+      {
+        "role": "user",
+        "content": "what is ur name"
+      },
+      {
+        "role": "assistant",
+        "content": "I don't have a name, but I'm here to help! How can I assist you today? \ud83d\ude0a"
+      }
+    ]
+  },
+  {
+    "id": "fcffdba4-94bb-4079-88f6-8e50d36b5653",
+    "timestamp": "2026-01-18 21:17",
+    "model": "gpt-oss:latest",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hello there"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello! How can I assist you today? \ud83d\ude0a"
+      },
+      {
+        "role": "user",
+        "content": "who are u"
+      },
+      {
+        "role": "assistant",
+        "content": "I\u2019m ChatGPT, a language model created by\u202fOpenAI. I\u2019m here to answer questions, help with tasks, chat, and provide information on a wide range of topics. How can I help you today?"
+      }
+    ]
+  },
+  {
+    "id": "fb4477b9-ebae-4084-a83b-fa7d0146014d",
+    "timestamp": "2026-01-18 21:16",
+    "model": "devstral-small-2:latest",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hi"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello! How can I assist you today? \ud83d\ude0a"
+      }
+    ]
+  },
+  {
     "id": "5bb1c1d7-351e-4424-8236-90b4f088ad9b",
     "timestamp": "2026-01-18 21:01",
     "model": "devstral-small-2:latest",
