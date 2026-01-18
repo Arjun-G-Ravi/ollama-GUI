@@ -79,6 +79,80 @@
             width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
             font-size: 10px; cursor: pointer;
         }
+        
+        /* Generation Settings Panel */
+        .gen-settings-panel {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .gen-settings-panel label {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .gen-settings-panel input, .gen-settings-panel select {
+            background: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 0.375rem;
+            color: white;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            width: 100%;
+        }
+        .gen-settings-panel input:focus, .gen-settings-panel select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        /* Generated Media Display */
+        .generated-media-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        .generated-image {
+            max-width: 100%;
+            max-height: 512px;
+            border-radius: 0.5rem;
+            border: 2px solid #3b82f6;
+        }
+        .generated-video {
+            max-width: 100%;
+            max-height: 512px;
+            border-radius: 0.5rem;
+            border: 2px solid #8b5cf6;
+        }
+        .progress-bar-container {
+            width: 100%;
+            max-width: 400px;
+            background: #374151;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            height: 8px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s ease;
+        }
+        
+        /* Mode indicator */
+        .mode-badge {
+            font-size: 0.65rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .mode-badge.text { background: #1d4ed8; color: white; }
+        .mode-badge.image-gen { background: #7c3aed; color: white; }
+        .mode-badge.video-gen { background: #dc2626; color: white; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
@@ -175,6 +249,63 @@
                         <i class="fa-solid fa-circle-notch fa-spin"></i> <span id="loadingText">Generating...</span>
                     </div>
                     
+                    <!-- Mode Badge -->
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="currentModeBadge" class="mode-badge text">💬 Text</span>
+                    </div>
+                    
+                    <!-- Generation Settings Panel (for Image/Video Gen) -->
+                    <div id="genSettingsPanel" class="gen-settings-panel hidden">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                            <div>
+                                <label>Width</label>
+                                <select id="genWidth">
+                                    <option value="256">256</option>
+                                    <option value="512" selected>512</option>
+                                    <option value="768">768</option>
+                                    <option value="1024">1024</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Height</label>
+                                <select id="genHeight">
+                                    <option value="256">256</option>
+                                    <option value="512" selected>512</option>
+                                    <option value="768">768</option>
+                                    <option value="1024">1024</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Steps</label>
+                                <input type="number" id="genSteps" value="30" min="1" max="150">
+                            </div>
+                            <div>
+                                <label>Guidance</label>
+                                <input type="number" id="genGuidance" value="7.5" min="0" max="20" step="0.5">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label>Negative Prompt</label>
+                                <input type="text" id="genNegPrompt" placeholder="blurry, low quality...">
+                            </div>
+                            <div>
+                                <label>Seed (-1 = random)</label>
+                                <input type="number" id="genSeed" value="-1" min="-1">
+                            </div>
+                        </div>
+                        <div id="videoSettings" class="grid grid-cols-2 gap-3 hidden">
+                            <div>
+                                <label>Frames</label>
+                                <input type="number" id="genFrames" value="16" min="4" max="64">
+                            </div>
+                            <div>
+                                <label>FPS</label>
+                                <input type="number" id="genFps" value="8" min="1" max="30">
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Image Preview Area -->
                     <div id="imagePreviewArea" class="image-preview-container"></div>
 
@@ -211,12 +342,29 @@
         let currentImages = []; // Stores base64 strings
         let currentThinkingBox = null; // Reference to current thinking message box
         let isInThinkingMode = false; // Track if we're currently processing thinking tags
+        
+        // HuggingFace / Generation Mode variables
+        let currentModelType = 'text'; // 'text', 'image-gen', 'video-gen'
+        let currentModelBackend = 'ollama'; // 'ollama', 'huggingface'
+        let customModelCards = {}; // Store custom model cards
+        let currentGenParams = {
+            width: 512,
+            height: 512,
+            steps: 30,
+            guidance_scale: 7.5,
+            negative_prompt: '',
+            seed: -1,
+            num_frames: 16,
+            fps: 8
+        };
+        let currentTaskId = null; // For HF generation tracking
 
         document.addEventListener('DOMContentLoaded', () => {
             checkHealth();
             fetchPrompts();
             fetchHistory();
             fetchFavorites();
+            fetchCustomCards(); // Fetch custom model cards on load
             setInterval(updateStats, 500);
             setInterval(checkHealth, 5000);
             
@@ -229,6 +377,16 @@
             tx.addEventListener('drop', handleDrop);
             tx.addEventListener('dragover', (e) => e.preventDefault());
         });
+        
+        // --- Fetch Custom Cards ---
+        async function fetchCustomCards() {
+            try {
+                const res = await fetch('/api/custom_cards');
+                customModelCards = await res.json();
+            } catch(e) {
+                console.error('Failed to fetch custom cards:', e);
+            }
+        }
 
         // --- Image Handling ---
         function handleFileSelect(e) {
@@ -371,9 +529,12 @@
                     fast: [],
                     chat: [],
                     uncensored: [],
-                    vision: []
+                    vision: [],
+                    'image-gen': [],
+                    'video-gen': []
                 };
 
+                // First, add Ollama models
                 data.models.forEach(m => {
                     const custom = customData[m.name] || {};
                     const tags = (custom.tags || []).map(t => t.toLowerCase());
@@ -387,6 +548,24 @@
                         categories.fast.push(m);
                     } else {
                         categories.chat.push(m);
+                    }
+                });
+
+                // Add HuggingFace models from custom cards
+                Object.keys(customData).forEach(modelId => {
+                    const card = customData[modelId];
+                    if (card.backend === 'huggingface') {
+                        const modelType = card.model_type || 'image-gen';
+                        const pseudoModel = {
+                            name: modelId,
+                            size: 0,
+                            isHuggingFace: true
+                        };
+                        if (modelType === 'image-gen') {
+                            categories['image-gen'].push(pseudoModel);
+                        } else if (modelType === 'video-gen') {
+                            categories['video-gen'].push(pseudoModel);
+                        }
                     }
                 });
 
@@ -417,6 +596,8 @@
                     content.innerHTML += sectionHtml;
                 };
 
+                renderSection('🎨 Image Generation', categories['image-gen'], 'fa-image');
+                renderSection('🎬 Video Generation', categories['video-gen'], 'fa-video');
                 renderSection('Vision Models', categories.vision, 'fa-eye');
                 renderSection('Chat & General Models', categories.chat, 'fa-comments');
                 renderSection('Coding Models', categories.coding, 'fa-code');
@@ -429,7 +610,8 @@
         }
 
         function createCardHtml(m, custom) {
-            const sizeGB = (m.size / (1024*1024*1024)).toFixed(1);
+            const isHuggingFace = m.isHuggingFace || custom.backend === 'huggingface';
+            const sizeGB = isHuggingFace ? 'HF' : (m.size / (1024*1024*1024)).toFixed(1);
             const isSelected = selectedModel === m.name ? 'selected' : '';
             const isFav = favoriteModels.includes(m.name);
             
@@ -444,6 +626,16 @@
             const reasoningBadge = custom.reasoning ? 
                 `<span class="text-[10px] bg-orange-900/50 text-orange-200 px-1.5 py-0.5 rounded border border-orange-800 ml-2"><i class="fa-solid fa-brain mr-1"></i>Reasoning</span>` : '';
 
+            // HuggingFace / Model Type Badges
+            const hfBadge = isHuggingFace ? 
+                `<span class="text-[10px] bg-yellow-900/50 text-yellow-200 px-1.5 py-0.5 rounded border border-yellow-800 ml-2"><i class="fa-solid fa-face-smile mr-1"></i>HuggingFace</span>` : '';
+            
+            const imageGenBadge = custom.model_type === 'image-gen' ? 
+                `<span class="text-[10px] bg-pink-900/50 text-pink-200 px-1.5 py-0.5 rounded border border-pink-800 ml-2"><i class="fa-solid fa-image mr-1"></i>Image Gen</span>` : '';
+            
+            const videoGenBadge = custom.model_type === 'video-gen' ? 
+                `<span class="text-[10px] bg-red-900/50 text-red-200 px-1.5 py-0.5 rounded border border-red-800 ml-2"><i class="fa-solid fa-video mr-1"></i>Video Gen</span>` : '';
+
             const description = custom.description ? `<p class="text-xs text-gray-400 mt-2 italic line-clamp-2">${custom.description}</p>` : '';
             const tags = custom.tags ? `<div class="mt-2 flex flex-wrap gap-1">${custom.tags.map(t => `<span class="text-[10px] bg-blue-900/50 text-blue-200 px-1.5 py-0.5 rounded border border-blue-800">${t}</span>`).join('')}</div>` : '';
             
@@ -457,11 +649,27 @@
             }
             if (custom.icon) iconClass = custom.icon; // Allow override
             
-            const borderColor = 'border-blue-400'; // Always blue
+            // Different border colors based on model type
+            let borderColor = 'border-blue-400';
+            if (custom.model_type === 'image-gen') borderColor = 'border-pink-400';
+            else if (custom.model_type === 'video-gen') borderColor = 'border-red-400';
+            
             const speedVal = custom.speed ? custom.speed : 'N/A';
+            const sizeDisplay = isHuggingFace ? 'HuggingFace' : `${sizeGB} GB`;
+            const modelType = custom.model_type || 'text';
+            const backend = custom.backend || 'ollama';
+
+            // For HF models, show default params instead of loading specs
+            const hfParamsHtml = isHuggingFace && custom.default_params ? `
+                <div class="text-xs text-gray-500 space-y-1 mt-3 pt-2 border-t border-gray-600">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><span class="text-[10px] text-gray-500 uppercase">Size</span> <span class="text-pink-300 font-mono">${custom.default_params.width}x${custom.default_params.height}</span></div>
+                        <div><span class="text-[10px] text-gray-500 uppercase">Steps</span> <span class="text-purple-300 font-mono">${custom.default_params.steps}</span></div>
+                    </div>
+                </div>` : '';
 
             return `
-                <div class="model-card bg-gray-700 border ${borderColor} rounded-lg p-4 cursor-pointer relative ${isSelected}" onclick="selectModel('${m.name}', '${displayName}')">
+                <div class="model-card bg-gray-700 border ${borderColor} rounded-lg p-4 cursor-pointer relative ${isSelected}" onclick="selectModel('${m.name}', '${displayName}', '${modelType}', '${backend}')">
                     <div class="absolute top-2 right-2 z-10">
                         <button onclick="toggleFavorite(event, '${m.name}')" class="text-lg hover:scale-110 transition ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}">
                             <i class="fa-solid fa-star"></i>
@@ -472,17 +680,20 @@
                             <i class="fa-solid ${iconClass} text-xs opacity-50"></i> ${displayName}
                         </h3>
                     </div>
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">${sizeGB} GB</span>
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <span class="text-xs ${isHuggingFace ? 'bg-yellow-600' : 'bg-gray-600'} px-2 py-0.5 rounded text-gray-100">${sizeDisplay}</span>
                         ${visionBadge}
                         ${reasoningBadge}
+                        ${imageGenBadge}
+                        ${videoGenBadge}
                     </div>
                     ${description}
                     ${tags}
+                    ${isHuggingFace ? hfParamsHtml : `
                     <div class="text-xs text-gray-500 space-y-1 mt-3 pt-2 border-t border-gray-600" id="details-${m.name.replace(/[:.]/g, '')}">
                         <div class="flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin"></i> <span>Loading specs...</span></div>
                     </div>
-                    <div id="speed-data-${m.name.replace(/[:.]/g, '')}" class="hidden">${speedVal}</div>
+                    <div id="speed-data-${m.name.replace(/[:.]/g, '')}" class="hidden">${speedVal}</div>`}
                 </div>
             `;
         }
@@ -506,14 +717,80 @@
             } catch(e) {}
         }
 
-        function selectModel(name, displayName) {
+        function selectModel(name, displayName, modelType = 'text', backend = 'ollama') {
             selectedModel = name;
+            currentModelType = modelType;
+            currentModelBackend = backend;
+            
             document.getElementById('currentModelName').innerText = displayName || name;
             closeModelModal();
             document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
             
-            // Preload the model into VRAM
-            preloadModel(name);
+            // Update UI based on model type
+            updateGenerationUI();
+            
+            // Load default params for HF models
+            if (backend === 'huggingface' && customModelCards[name]) {
+                const defaultParams = customModelCards[name].default_params || {};
+                currentGenParams = { ...currentGenParams, ...defaultParams };
+                updateGenSettingsInputs();
+            }
+            
+            // Preload the model into VRAM (only for Ollama models)
+            if (backend === 'ollama') {
+                preloadModel(name);
+            }
+        }
+        
+        function updateGenerationUI() {
+            const genSettingsPanel = document.getElementById('genSettingsPanel');
+            const modeBadge = document.getElementById('currentModeBadge');
+            
+            if (currentModelType === 'image-gen' || currentModelType === 'video-gen') {
+                genSettingsPanel.classList.remove('hidden');
+                
+                // Update which settings are visible
+                const videoSettings = document.getElementById('videoSettings');
+                if (currentModelType === 'video-gen') {
+                    videoSettings.classList.remove('hidden');
+                    modeBadge.textContent = '🎬 Video';
+                    modeBadge.className = 'mode-badge video-gen';
+                } else {
+                    videoSettings.classList.add('hidden');
+                    modeBadge.textContent = '🎨 Image';
+                    modeBadge.className = 'mode-badge image-gen';
+                }
+            } else {
+                genSettingsPanel.classList.add('hidden');
+                modeBadge.textContent = '💬 Text';
+                modeBadge.className = 'mode-badge text';
+            }
+        }
+        
+        function updateGenSettingsInputs() {
+            document.getElementById('genWidth').value = currentGenParams.width || 512;
+            document.getElementById('genHeight').value = currentGenParams.height || 512;
+            document.getElementById('genSteps').value = currentGenParams.steps || 30;
+            document.getElementById('genGuidance').value = currentGenParams.guidance_scale || 7.5;
+            document.getElementById('genNegPrompt').value = currentGenParams.negative_prompt || '';
+            document.getElementById('genSeed').value = currentGenParams.seed || -1;
+            if (currentModelType === 'video-gen') {
+                document.getElementById('genFrames').value = currentGenParams.num_frames || 16;
+                document.getElementById('genFps').value = currentGenParams.fps || 8;
+            }
+        }
+        
+        function readGenSettings() {
+            currentGenParams.width = parseInt(document.getElementById('genWidth').value) || 512;
+            currentGenParams.height = parseInt(document.getElementById('genHeight').value) || 512;
+            currentGenParams.steps = parseInt(document.getElementById('genSteps').value) || 30;
+            currentGenParams.guidance_scale = parseFloat(document.getElementById('genGuidance').value) || 7.5;
+            currentGenParams.negative_prompt = document.getElementById('genNegPrompt').value || '';
+            currentGenParams.seed = parseInt(document.getElementById('genSeed').value) || -1;
+            if (currentModelType === 'video-gen') {
+                currentGenParams.num_frames = parseInt(document.getElementById('genFrames').value) || 16;
+                currentGenParams.fps = parseInt(document.getElementById('genFps').value) || 8;
+            }
         }
         
         async function preloadModel(modelName) {
@@ -544,7 +821,18 @@
             if (isGenerating) {
                 stopGeneration();
             } else {
-                sendMessage();
+                // Route to appropriate generation function based on model type
+                if (currentModelBackend === 'huggingface') {
+                    if (currentModelType === 'image-gen') {
+                        generateImage();
+                    } else if (currentModelType === 'video-gen') {
+                        generateVideo();
+                    } else {
+                        sendMessage(); // Fallback
+                    }
+                } else {
+                    sendMessage();
+                }
             }
         }
 
@@ -554,8 +842,215 @@
                 abortController = null;
             }
             isGenerating = false;
+            currentTaskId = null;
             document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
             document.getElementById('loadingIndicator').classList.add('hidden');
+        }
+
+        // --- HuggingFace Image Generation ---
+        async function generateImage() {
+            if (isGenerating) return;
+            if (!selectedModel) { alert("Select a model!"); openModelModal(); return; }
+            
+            const input = document.getElementById('userInput');
+            const prompt = input.value.trim();
+            
+            if (!prompt) { alert("Enter a prompt for image generation!"); return; }
+
+            input.value = ''; input.style.height = 'auto';
+            isGenerating = true;
+            
+            document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('loadingText').innerText = 'Starting image generation...';
+
+            // Append user message
+            appendMessage("user", `🎨 Generate image: "${prompt}"`);
+            
+            // Read current settings
+            readGenSettings();
+            
+            const aiMsgDiv = appendMessage("assistant", ""); 
+            const answerContent = aiMsgDiv.querySelector('.answer-content');
+            const metaDiv = aiMsgDiv.querySelector('.msg-meta');
+            
+            try {
+                // Start generation
+                const startRes = await fetch('/api/hf/generate_image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        prompt: prompt,
+                        params: currentGenParams
+                    })
+                });
+                
+                const startData = await startRes.json();
+                if (startData.error) throw new Error(startData.error);
+                
+                currentTaskId = startData.task_id;
+                
+                // Poll for status
+                answerContent.innerHTML = `
+                    <div class="generated-media-container">
+                        <div class="text-center">
+                            <i class="fa-solid fa-spinner fa-spin text-4xl text-blue-400 mb-4"></i>
+                            <p id="genStatusText" class="text-gray-400">Initializing...</p>
+                            <div class="progress-bar-container mt-4">
+                                <div id="genProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                await pollGenerationStatus(currentTaskId, answerContent, metaDiv, 'image');
+                
+            } catch (e) {
+                answerContent.innerHTML = `<span class="text-red-400">Error: ${e.message}</span>`;
+            }
+
+            isGenerating = false;
+            currentTaskId = null;
+            document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+            document.getElementById('loadingIndicator').classList.add('hidden');
+        }
+
+        // --- HuggingFace Video Generation ---
+        async function generateVideo() {
+            if (isGenerating) return;
+            if (!selectedModel) { alert("Select a model!"); openModelModal(); return; }
+            
+            const input = document.getElementById('userInput');
+            const prompt = input.value.trim();
+            
+            if (!prompt) { alert("Enter a prompt for video generation!"); return; }
+
+            input.value = ''; input.style.height = 'auto';
+            isGenerating = true;
+            
+            document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-stop"></i>';
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('loadingText').innerText = 'Starting video generation...';
+
+            // Append user message
+            appendMessage("user", `🎬 Generate video: "${prompt}"`);
+            
+            // Read current settings
+            readGenSettings();
+            
+            const aiMsgDiv = appendMessage("assistant", ""); 
+            const answerContent = aiMsgDiv.querySelector('.answer-content');
+            const metaDiv = aiMsgDiv.querySelector('.msg-meta');
+            
+            try {
+                // Start generation
+                const startRes = await fetch('/api/hf/generate_video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        prompt: prompt,
+                        params: currentGenParams
+                    })
+                });
+                
+                const startData = await startRes.json();
+                if (startData.error) throw new Error(startData.error);
+                
+                currentTaskId = startData.task_id;
+                
+                // Poll for status
+                answerContent.innerHTML = `
+                    <div class="generated-media-container">
+                        <div class="text-center">
+                            <i class="fa-solid fa-spinner fa-spin text-4xl text-purple-400 mb-4"></i>
+                            <p id="genStatusText" class="text-gray-400">Initializing...</p>
+                            <div class="progress-bar-container mt-4">
+                                <div id="genProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                await pollGenerationStatus(currentTaskId, answerContent, metaDiv, 'video');
+                
+            } catch (e) {
+                answerContent.innerHTML = `<span class="text-red-400">Error: ${e.message}</span>`;
+            }
+
+            isGenerating = false;
+            currentTaskId = null;
+            document.getElementById('sendBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+            document.getElementById('loadingIndicator').classList.add('hidden');
+        }
+
+        // --- Poll HuggingFace Generation Status ---
+        async function pollGenerationStatus(taskId, answerContent, metaDiv, mediaType) {
+            const startTime = Date.now();
+            
+            while (isGenerating && currentTaskId === taskId) {
+                try {
+                    const res = await fetch(`/api/hf/status/${taskId}`);
+                    const data = await res.json();
+                    
+                    if (data.status === 'not_found') {
+                        answerContent.innerHTML = `<span class="text-red-400">Task not found</span>`;
+                        return;
+                    }
+                    
+                    // Update progress
+                    const statusText = document.getElementById('genStatusText');
+                    const progressBar = document.getElementById('genProgressBar');
+                    if (statusText) statusText.textContent = data.message || data.status;
+                    if (progressBar) progressBar.style.width = `${data.progress || 0}%`;
+                    document.getElementById('loadingText').innerText = data.message || 'Generating...';
+                    
+                    if (data.status === 'completed') {
+                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                        metaDiv.innerText = `Generated in ${elapsed}s`;
+                        
+                        if (mediaType === 'image' && data.image_base64) {
+                            answerContent.innerHTML = `
+                                <div class="generated-media-container">
+                                    <img src="data:image/png;base64,${data.image_base64}" class="generated-image" alt="Generated image">
+                                    <div class="flex gap-2">
+                                        <a href="/api/hf/download/${taskId}" download class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm">
+                                            <i class="fa-solid fa-download mr-2"></i>Download
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (mediaType === 'video') {
+                            answerContent.innerHTML = `
+                                <div class="generated-media-container">
+                                    <video controls autoplay loop class="generated-video">
+                                        <source src="/api/hf/download/${taskId}" type="video/mp4">
+                                    </video>
+                                    <div class="flex gap-2">
+                                        <a href="/api/hf/download/${taskId}" download class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded text-sm">
+                                            <i class="fa-solid fa-download mr-2"></i>Download
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        return;
+                    }
+                    
+                    if (data.status === 'error') {
+                        answerContent.innerHTML = `<span class="text-red-400">Generation failed: ${data.message}</span>`;
+                        return;
+                    }
+                    
+                    // Wait before next poll
+                    await new Promise(r => setTimeout(r, 1000));
+                    
+                } catch (e) {
+                    console.error('Poll error:', e);
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
         }
 
         async function sendMessage() {

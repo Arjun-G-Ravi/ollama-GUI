@@ -6,8 +6,11 @@ import uuid
 import requests
 import subprocess
 import time
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+import base64
+import threading
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_file
 from datetime import datetime
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -17,6 +20,13 @@ PROMPTS_FILE = "prompts.json"
 HISTORY_FILE = "history.json"
 FAVORITES_FILE = "favorites.json"
 MODEL_CARDS_FILE = "model_cards.json"
+GENERATED_MEDIA_DIR = "generated_media"
+
+# Ensure generated media directory exists
+os.makedirs(GENERATED_MEDIA_DIR, exist_ok=True)
+
+# HuggingFace inference tracking
+hf_generation_status = {}  # Track ongoing generations
 
 # --- Helpers ---
 def load_json(filename, default):
@@ -185,6 +195,292 @@ def preload_model():
         return jsonify({"status": "preloaded"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# --- HuggingFace Integration ---
+
+def run_hf_image_generation(task_id, model_id, prompt, params):
+    """Run HuggingFace image generation in background thread"""
+    try:
+        hf_generation_status[task_id] = {"status": "loading", "progress": 0, "message": "Loading model..."}
+        
+        from diffusers import AutoPipelineForText2Image, StableDiffusionPipeline, StableDiffusionXLPipeline
+        import torch
+        
+        hf_generation_status[task_id] = {"status": "loading", "progress": 10, "message": "Initializing pipeline..."}
+        
+        # Detect device
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        dtype = torch.float16 if device == "cuda" else torch.float32
+        
+        # Load the appropriate pipeline
+        try:
+            pipe = AutoPipelineForText2Image.from_pretrained(
+                model_id,
+                torch_dtype=dtype,
+                use_safetensors=True
+            )
+        except:
+            # Fallback to standard SD pipeline
+            pipe = StableDiffusionPipeline.from_pretrained(
+                model_id,
+                torch_dtype=dtype,
+                use_safetensors=True
+            )
+        
+        pipe = pipe.to(device)
+        
+        # Enable memory optimizations
+        if device == "cuda":
+            try:
+                pipe.enable_attention_slicing()
+            except:
+                pass
+        
+        hf_generation_status[task_id] = {"status": "generating", "progress": 30, "message": "Generating image..."}
+        
+        # Extract generation parameters
+        width = params.get("width", 512)
+        height = params.get("height", 512)
+        num_inference_steps = params.get("steps", 30)
+        guidance_scale = params.get("guidance_scale", 7.5)
+        negative_prompt = params.get("negative_prompt", "")
+        seed = params.get("seed", -1)
+        
+        # Set up generator for reproducibility
+        generator = None
+        if seed >= 0:
+            generator = torch.Generator(device=device).manual_seed(seed)
+        
+        # Generate image
+        result = pipe(
+            prompt=prompt,
+            negative_prompt=negative_prompt if negative_prompt else None,
+            width=width,
+            height=height,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            generator=generator
+        )
+        
+        image = result.images[0]
+        
+        # Save image
+        filename = f"{task_id}.png"
+        filepath = os.path.join(GENERATED_MEDIA_DIR, filename)
+        image.save(filepath)
+        
+        # Convert to base64 for preview
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+        
+        hf_generation_status[task_id] = {
+            "status": "completed",
+            "progress": 100,
+            "message": "Generation complete!",
+            "image_base64": img_base64,
+            "filepath": filepath
+        }
+        
+        # Clean up
+        del pipe
+        if device == "cuda":
+            torch.cuda.empty_cache()
+            
+    except Exception as e:
+        hf_generation_status[task_id] = {
+            "status": "error",
+            "progress": 0,
+            "message": str(e)
+        }
+
+
+def run_hf_video_generation(task_id, model_id, prompt, params):
+    """Run HuggingFace video generation in background thread"""
+    try:
+        hf_generation_status[task_id] = {"status": "loading", "progress": 0, "message": "Loading video model..."}
+        
+        import torch
+        
+        # Detect device
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        dtype = torch.float16 if device == "cuda" else torch.float32
+        
+        hf_generation_status[task_id] = {"status": "loading", "progress": 10, "message": "Initializing video pipeline..."}
+        
+        # Try to import video generation libraries
+        try:
+            from diffusers import DiffusionPipeline, TextToVideoSDPipeline
+            pipe = TextToVideoSDPipeline.from_pretrained(
+                model_id,
+                torch_dtype=dtype
+            )
+        except:
+            from diffusers import DiffusionPipeline
+            pipe = DiffusionPipeline.from_pretrained(
+                model_id,
+                torch_dtype=dtype
+            )
+        
+        pipe = pipe.to(device)
+        
+        if device == "cuda":
+            try:
+                pipe.enable_attention_slicing()
+                pipe.enable_vae_slicing()
+            except:
+                pass
+        
+        hf_generation_status[task_id] = {"status": "generating", "progress": 30, "message": "Generating video frames..."}
+        
+        # Extract generation parameters
+        num_frames = params.get("num_frames", 16)
+        fps = params.get("fps", 8)
+        width = params.get("width", 512)
+        height = params.get("height", 512)
+        num_inference_steps = params.get("steps", 25)
+        guidance_scale = params.get("guidance_scale", 7.5)
+        seed = params.get("seed", -1)
+        
+        generator = None
+        if seed >= 0:
+            generator = torch.Generator(device=device).manual_seed(seed)
+        
+        # Generate video frames
+        result = pipe(
+            prompt=prompt,
+            num_frames=num_frames,
+            width=width,
+            height=height,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            generator=generator
+        )
+        
+        frames = result.frames[0] if hasattr(result, 'frames') else result.images
+        
+        hf_generation_status[task_id] = {"status": "encoding", "progress": 80, "message": "Encoding video..."}
+        
+        # Save as video file
+        filename = f"{task_id}.mp4"
+        filepath = os.path.join(GENERATED_MEDIA_DIR, filename)
+        
+        # Use imageio to save video
+        import imageio
+        import numpy as np
+        
+        # Convert frames to numpy arrays if needed
+        frame_arrays = []
+        for frame in frames:
+            if hasattr(frame, 'numpy'):
+                frame_arrays.append(frame.numpy())
+            elif hasattr(frame, '__array__'):
+                frame_arrays.append(np.array(frame))
+            else:
+                frame_arrays.append(frame)
+        
+        imageio.mimwrite(filepath, frame_arrays, fps=fps)
+        
+        hf_generation_status[task_id] = {
+            "status": "completed",
+            "progress": 100,
+            "message": "Video generation complete!",
+            "filepath": filepath,
+            "filename": filename
+        }
+        
+        # Clean up
+        del pipe
+        if device == "cuda":
+            torch.cuda.empty_cache()
+            
+    except Exception as e:
+        hf_generation_status[task_id] = {
+            "status": "error",
+            "progress": 0,
+            "message": str(e)
+        }
+
+
+@app.route('/api/hf/generate_image', methods=['POST'])
+def hf_generate_image():
+    """Start HuggingFace image generation"""
+    try:
+        data = request.json
+        model_id = data.get('model')
+        prompt = data.get('prompt')
+        params = data.get('params', {})
+        
+        if not model_id or not prompt:
+            return jsonify({"error": "Model and prompt are required"}), 400
+        
+        task_id = str(uuid.uuid4())
+        
+        # Start generation in background thread
+        thread = threading.Thread(
+            target=run_hf_image_generation,
+            args=(task_id, model_id, prompt, params)
+        )
+        thread.start()
+        
+        return jsonify({"task_id": task_id, "status": "started"})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/hf/generate_video', methods=['POST'])
+def hf_generate_video():
+    """Start HuggingFace video generation"""
+    try:
+        data = request.json
+        model_id = data.get('model')
+        prompt = data.get('prompt')
+        params = data.get('params', {})
+        
+        if not model_id or not prompt:
+            return jsonify({"error": "Model and prompt are required"}), 400
+        
+        task_id = str(uuid.uuid4())
+        
+        # Start generation in background thread
+        thread = threading.Thread(
+            target=run_hf_video_generation,
+            args=(task_id, model_id, prompt, params)
+        )
+        thread.start()
+        
+        return jsonify({"task_id": task_id, "status": "started"})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/hf/status/<task_id>')
+def hf_generation_status_check(task_id):
+    """Check status of HuggingFace generation task"""
+    if task_id in hf_generation_status:
+        return jsonify(hf_generation_status[task_id])
+    return jsonify({"status": "not_found"}), 404
+
+
+@app.route('/api/hf/download/<task_id>')
+def hf_download_media(task_id):
+    """Download generated media file"""
+    if task_id in hf_generation_status:
+        status = hf_generation_status[task_id]
+        if status.get("status") == "completed" and "filepath" in status:
+            return send_file(status["filepath"], as_attachment=True)
+    return jsonify({"error": "File not found"}), 404
+
+
+@app.route('/api/hf/models')
+def get_hf_models():
+    """Get list of HuggingFace models from model_cards.json"""
+    cards = load_json(MODEL_CARDS_FILE, {})
+    hf_models = {k: v for k, v in cards.items() if v.get("backend") == "huggingface"}
+    return jsonify(hf_models)
 
 if __name__ == '__main__':
     load_json(PROMPTS_FILE, {"Default": "You are a helpful assistant."})

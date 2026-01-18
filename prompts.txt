@@ -1,3 +1,4 @@
+# The prompt direction that made the base app
 i want a localhost based app using flask, html, css for running llms locally which have to provide a ui over ollama. i run locally using ollama. this should properly see all the models that ive downloaded and show that in the UI. Also, i should be able to save multiple default prompts, which i should be able to reuse using a click. make teh UI look great
 
 
@@ -42,3 +43,37 @@ i want multiple classes within the model selector. it should be: chat, coding an
 Then, i want models to be placed in the correct position as my model_cards. also instead of CTX, change it to speed, which i can add as a param manually in my model_cards.
 
 i want to have the ability to rename the model name to show in the model card. also, i want "vision" next to the size of the model in the model card for models that support vision. If the model support vision capabilities, i should be able to drag drop images into the the chat place and give it to the model. The image history can be stored with the history. now give me whole code, dont miss out anyything.dont break or remove anything, pls 
+
+i want the following changes
+- add it so that the model with vision can support having more than one images as attachment(or copy paste)
+- add it so that clicking on the ollama studio creates a new chat
+- just like the "vision" text in model card, i want "reasoning" for models that think, take time and respond
+- when the model is thinking, the thinking tokens should be seen in the website as a separate box(with smaller italics font)
+
+dont remove any feature, dont touch unwanted things, dont break pls
+
+
+
+as u can see in the image
+the reasoning should be shown streamed while the model is reasoning
+the new chat started and the logo should dissapear when i start chatting
+the text at the bottom says generating when the model is generating tokens
+it should change from loading model when loading model
+thinking when moel is htinking
+generating when the model is generating output
+also the moment i select a model from the model selector, you should load that model to vram to save time
+
+i still cant see the reasoning tokens
+just remove the enw chat logo altogether
+￼the preloading of models works, but while doing so ensure to put the loading message at the bottom
+
+ the new chat is still here, and i still cant see the reasoning tokens. ensure that the reasoning tokens will appear at the website. think hard and ensure
+
+make all color in model_card blue, but when i hover over one, it is green. The currently selected one is filled with blue(it is correcly done now, dont change). make logos consistent with model - like brain for chat, open lock for uncensored, code for code and lightning for fast. also add a small logo on the tab of browser and change the tab name to ollama studio
+
+
+in model card, for each use only the followin tags - chat, reasoning, uncensored, fast, super-smartcoding, experimental. update with this
+also, add speed to all and set it to "- tok/s"
+
+when i run the code when model is being preloaded, it switches to loading. im not sure if here the model is being loaded again. if it is, fix it. 
+also, when i initially open the site, i want the last model that i used as the model present there. maybe store it somewhere
